@@ -138,10 +138,66 @@ The two key ideas of FAT are:
 
 ### Strengths and weaknesses of FAT
 
-It's easy to create a new file because we just need to adjust the directory table fo the parent directory and set the busy bit for the starting block.
+**File Creation**: It's easy to create a new file because we just need to adjust the directory table fo the parent directory and set the busy bit for the starting block.
 
-Adding to the file is as easy as adjusting the next field of the FAT.
+**File Appending:** Adding to the file is as easy as adjusting the next field of the FAT.
 
-Space efficiency is pretty good too, all that matters is if a file is free. It is good for sequential access but poor for random access because we have to follow the links to get to the middle of the file. 
+**Space Efficiency**: Space efficiency is pretty good too, all that matters is if a file is free. 
+
+**Access:** It is good for sequential access but poor for random access because we have to follow the links to get to the middle of the file. 
 
 ### Inode Structure
+
+Another popular file system format is the **extended(ext) format**. **Each file** on the disk has a data structure called an **inode** associated with it. 
+
+Each inode is of fixed length. It contains the metadata for the file, and the inode serves as the glue that links the data blocks together. 
+
+The first twelve pointers are direct pointers and they point to the first 12 blocks of the file. This makes the strategy efficient for small files. 
+
+The thirteenth block is an indirect pointer to a table of addresses for the next blocks in the file. The indirection increases the amount of blocks an inode can reference, the downside is longer seek time to find the right block.
+
+The fourteenth block is a double indirect pointer. This is used for much larger files. 
+
+The fifteenth block is a triple indirect pointer. 
+
+Just like in FAT, directories map file names to their inodes.
+
+<img src="file_system_resources/inode.png">
+
+### Strengths and Weaknesses of Inode system
+
+**File Creation**: Grab an inode and update the parent directory.
+
+**File Appending**: Grab a new block and update the inode.
+
+**Space Efficiency**: Still efficient with space, but there is a little waste with potentially unused fields.
+
+**Access:** Inodes add an extra level of indirection as we go through the directory tree. A directory points to the inode of the file instead of the first data block of the file. What's more important is that the inode group the data blocks in a tree-like structure, which makes random access much faster!
+
+## File System Optimizations
+
+### Buffer Cache
+
+Most operating systems use free portions of main memory as a cache for the much slower mass storage device. Main memory is as much as 100,000x faster than disk for random access.
+
+The part of main memory that caches disk data is called the **unified buffer cache**. When data is read from disk, it is stored in this cache so that subsequent reads can access it in memory and not have to bother the disk again.
+
+<img src="file_system_resources/buffer_cache.png">
+
+Because disk access is often sequential, it is common for the disk to read ahead and save it to the unified buffer cache so that it is there when the application needs it.
+
+Writing to disk is often done using the **write-back strategy**. Data is written only to the cache and the page is marked as dirty. The slower operation to the disk is postponed until an opportune time. 
+
+The advantage of this strategy is that the program gets to resume faster and get on with its work, the downside is that if the system crashes before memory has been written to disk, the data will be lost. 
+
+If you really want to be sure that your changes are reflected, use `fsync` or `msync`.
+
+### Journaling
+
+As we discussed earlier, a system crash or a power failure could cause data loss if a write-back strategy is being used. 
+
+It would be nice if we could periodically copy all the changes in memory to disk. The trouble with this strategy though is that we would have to spend an inordinate amount of time seeking the disk head to the right spots to update the dirty blocks. It is **the seek time of the disk head that makes random access to disks so slow in general**. 
+
+Sequential access can be up to a 1000x faster than random access, so journaling file systems take advantage of this efficiency. They **reserve a contiguous portion of the disk** for the purpose of copying dirty blocks in a contiguous sequence from main memory. In a more opportune time the disk applies the journaled changes to the disparate blocks scattered throughout the disk.
+
+The only problem with this strategy is that it complicates reading. When we want to read, we have to check the journal to see if there is newer information that hasn't been reflected in the block that is being searched for. In total, journaling is actually slower, however it allows us to free up memory when we have too many dirty blocks. It also helps with crashes :). 
