@@ -1,6 +1,18 @@
 # Review - File Systems
 
 ## Table of Contents
+* [Introduction](#introduction)
+* [Access Rights](#access-rights)
+* [Developer Interface](#developer-interface)
+  * [Positional Interface](#positional-interface)
+  * [Memory Interface](#memory-interface)
+* [Allocation Strategies](#allocation-strategies)
+  * [FAT](#file-allocation-table-fat-format)
+  * [Inode](#inode-structure)
+* [File System Optimizations](#file-system-optimizations)
+  * [Buffer Cache](#buffer-cache)
+  * [Journaling](#journaling)
+  * [DMA](#direct-memory-access)
 
 ## Introduction
 
@@ -116,13 +128,13 @@ int main(int argc, char **argv){
 
 Just like caches work in units of cache lines, and virtual memory works in term of pages, **file systems work in terms of blocks**, or sometimes clusters.
 
-<img src="file_system_resources/allocation.png">
+<img src="file_systems_resources/allocation.png">
 
 There are several strategies for **keeping track of which blocks are free** and which are used. One easy way is to keep a **list** of free blocks, another way is to keep a bit vector which indicates if the block is free or not. 
 
 We want our file creation to be fast, we want them flexibly sized, have an efficient use of space, and have fast sequential and random access.
 
-<img src="file_system_resources/allocation2.png">
+<img src="file_systems_resources/allocation2.png">
 
 ### File Allocation Table (FAT) format
 
@@ -134,7 +146,7 @@ The two key ideas of FAT are:
 1. Each **file** is represented as a **linked-list of blocks**. The links are indexed in the file allocation table, which is indexed by number. Given the starting number of a file, we can use a constant-time look-up to retrieve the next block. A special value, (in the image below, a -1, indicates the EOF).
 2. The **directory table** **associates filenames with starting blocks** and captures the heirarchy of the files in the filesystem.
 
-<img src="file_system_resources/FAT.png">
+<img src="file_systems_resources/FAT.png">
 
 ### Strengths and weaknesses of FAT
 
@@ -162,7 +174,7 @@ The fifteenth block is a triple indirect pointer.
 
 Just like in FAT, directories map file names to their inodes.
 
-<img src="file_system_resources/inode.png">
+<img src="file_systems_resources/inode.png">
 
 ### Strengths and Weaknesses of Inode system
 
@@ -182,7 +194,7 @@ Most operating systems use free portions of main memory as a cache for the much 
 
 The part of main memory that caches disk data is called the **unified buffer cache**. When data is read from disk, it is stored in this cache so that subsequent reads can access it in memory and not have to bother the disk again.
 
-<img src="file_system_resources/buffer_cache.png">
+<img src="file_systems_resources/buffer_cache.png">
 
 Because disk access is often sequential, it is common for the disk to read ahead and save it to the unified buffer cache so that it is there when the application needs it.
 
@@ -201,3 +213,13 @@ It would be nice if we could periodically copy all the changes in memory to disk
 Sequential access can be up to a 1000x faster than random access, so journaling file systems take advantage of this efficiency. They **reserve a contiguous portion of the disk** for the purpose of copying dirty blocks in a contiguous sequence from main memory. In a more opportune time the disk applies the journaled changes to the disparate blocks scattered throughout the disk.
 
 The only problem with this strategy is that it complicates reading. When we want to read, we have to check the journal to see if there is newer information that hasn't been reflected in the block that is being searched for. In total, journaling is actually slower, however it allows us to free up memory when we have too many dirty blocks. It also helps with crashes :). 
+
+### Direct Memory Access
+
+One last optimization we can talk about is **direct memory access (DMA)**. In DMA, the CPU outsources work to the device controller to read/write from main memory and the disk. This frees the CPU to go about doing its work. 
+
+Now, of course there will be competition for the memory bus, however most of the CPUs instructions will be in cache, so the device controller is free to use the memory bus to do whatever it needs to do. 
+
+<img src="file_systems_resources/dma.png">
+
+<img src="file_systems_resources/optimizations.png">
