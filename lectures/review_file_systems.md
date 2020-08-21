@@ -33,7 +33,7 @@ Conceptually, we can think of access rights as a giant matrix with users and the
 
 Unix, like OS's achieve a fairly efficient system by assigning an `owner` and `group` for each file.
 
-<img src="file_systems_resources/access_rights.png">
+<img src="resources/file_systems_resources/access_rights.png">
 
 There are separate read, write, and execute bits for the user, group and then another set for everybody else. This gives us 9 bits for representing the possibilities.
 
@@ -49,7 +49,7 @@ There are two ways that developers interact with the filesystem, the first is a 
 
 Let's look at the positional interface first:
 
-<img src="file_systems_resources/positional.png">
+<img src="resources/file_systems_resources/positional.png">
 
 Search through a simple text file and replace the value if it matches a key:
 
@@ -85,7 +85,7 @@ return EXIT_FAILURE;
 
 It's also possible to interact with a file in a way that let's us treat it just like memory. As before, we open a file using `open`, instead of using `read` and `write` however we use **mmap**, which returns a pointer to a region of memory that we can manipulate in our code. Eventually, whatever changes we make to this memory gets reflected in the file. When we are done we call **munmap**, which syncs the contents of memory with the file and then frees up the memory.
 
-<img src="file_systems_resources/mmap.png">
+<img src="resources/file_systems_resources/mmap.png">
 
 Use mmap to shuffle a binary file:
 
@@ -128,13 +128,13 @@ int main(int argc, char **argv){
 
 Just like caches work in units of cache lines, and virtual memory works in term of pages, **file systems work in terms of blocks**, or sometimes clusters.
 
-<img src="file_systems_resources/allocation.png">
+<img src="resources/file_systems_resources/allocation.png">
 
 There are several strategies for **keeping track of which blocks are free** and which are used. One easy way is to keep a **list** of free blocks, another way is to keep a bit vector which indicates if the block is free or not. 
 
 We want our file creation to be fast, we want them flexibly sized, have an efficient use of space, and have fast sequential and random access.
 
-<img src="file_systems_resources/allocation2.png">
+<img src="resources/file_systems_resources/allocation2.png">
 
 ### File Allocation Table (FAT) format
 
@@ -146,7 +146,7 @@ The two key ideas of FAT are:
 1. Each **file** is represented as a **linked-list of blocks**. The links are indexed in the file allocation table, which is indexed by number. Given the starting number of a file, we can use a constant-time look-up to retrieve the next block. A special value, (in the image below, a -1, indicates the EOF).
 2. The **directory table** **associates filenames with starting blocks** and captures the heirarchy of the files in the filesystem.
 
-<img src="file_systems_resources/FAT.png">
+<img src="resources/file_systems_resources/FAT.png">
 
 ### Strengths and weaknesses of FAT
 
@@ -174,7 +174,7 @@ The fifteenth block is a triple indirect pointer.
 
 Just like in FAT, directories map file names to their inodes.
 
-<img src="file_systems_resources/inode.png">
+<img src="resources/file_systems_resources/inode.png">
 
 ### Strengths and Weaknesses of Inode system
 
@@ -194,7 +194,7 @@ Most operating systems use free portions of main memory as a cache for the much 
 
 The part of main memory that caches disk data is called the **unified buffer cache**. When data is read from disk, it is stored in this cache so that subsequent reads can access it in memory and not have to bother the disk again.
 
-<img src="file_systems_resources/buffer_cache.png">
+<img src="resources/file_systems_resources/buffer_cache.png">
 
 Because disk access is often sequential, it is common for the disk to read ahead and save it to the unified buffer cache so that it is there when the application needs it.
 
@@ -220,6 +220,6 @@ One last optimization we can talk about is **direct memory access (DMA)**. In DM
 
 Now, of course there will be competition for the memory bus, however most of the CPUs instructions will be in cache, so the device controller is free to use the memory bus to do whatever it needs to do. 
 
-<img src="file_systems_resources/dma.png">
+<img src="resources/file_systems_resources/dma.png">
 
-<img src="file_systems_resources/optimizations.png">
+<img src="resources/file_systems_resources/optimizations.png">
