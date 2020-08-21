@@ -78,7 +78,7 @@ Typical cache policies exploit both kinds of locality. It exploits temporal loca
 
 **Blocks** are a division of memory in relatively small amounts. Often 64 bytes.
 
-## Mapping
+## Direct Mapping
 
 Given an address, how can I find out if that data is in the cache and how do I retrieve it? We will start with a direct-mapped cache and a little notation.
 
@@ -86,6 +86,10 @@ Let's suppose we have 2^m addresses, 2^n block size, and we have 2^k cache entri
 
 The lowest n-bits in an address are the **offset**. They **specify where within a given cache block the memory is**. The rest of the bits tell us the block number. 
 
-How do we know where to look for this block within the cache? We need some kind of hashing function. The next k bits of the address are called the **index**. They tell us where to look for our data within the cache. The higher order bits are called the **tag**. 
+How do we know where to look for this block within the cache? We need some kind of hashing function. The next k bits of the address are called the **index**. They tell us where to look for our data within the cache. The higher order bits are called the **tag**, and they specify within an index, which block is being used.
 
 <img src="resources/review_memory_systems/direct_mapping.png">
+
+<img src="resources/review_memory_systems/memory_quiz.png">
+
+## Associative Mapping
