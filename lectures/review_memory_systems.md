@@ -90,6 +90,18 @@ How do we know where to look for this block within the cache? We need some kind 
 
 <img src="resources/review_memory_systems/direct_mapping.png">
 
+### Check your Understanding
+
 <img src="resources/review_memory_systems/memory_quiz.png">
+
+In the example above, the offset is 1 bit, and the index and tag are both 2 bits.
+
+<img src="resources/review_memory_systems/memory_quiz.png">
+
+Let's do the index first.
+
+The cache can be broken into 8 blocks. 512/64. This means that only 2^3 blocks are needed for representing the index. `3`.
+
+Next, for the tag we can work backwards. There are 22 total bits, minus 3 which are being used for the index, minus six (2^6), which is used for the cache offset to describe all of the addresses within the cache block. The answer is thus `13`.
 
 ## Associative Mapping
