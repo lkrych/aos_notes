@@ -52,3 +52,40 @@ How many cycles does a process with a 99% hit rate spend on average?
 How about one with a 90% hit rate?
 
 `((10 * 100) + (90 * 4))/100 -> 13.6 cycles`
+
+## Memory Hierarchy
+
+One of the most important considerations in cache design is the **tradeoff between speed and capacity**. We would like the retrieval to be fast and for the cache hit rate to be high. These goals however are somewhat contradictory.
+
+To deal with this we trade-off size vs speed multiple times by creating a cache hierarchy. 
+
+<img src="resources/review_memory_systems/cache_heirarchy.png">
+
+## Locality and Cache Blocks
+
+In order for a cache to be effective, the hit rate needs to be high. That is, we need to anticipate what data the process will need next.
+
+Ideally we would be able to plan ahead, instead we use the **heuristic of locality**. If an application needs memory from one memory address, it will likely need memory from the surrounding blocks. 
+
+Experts like to distinguish between **two types of locality**: **temporal** and **spatial**. 
+
+1. **temporal locality** - refers to the tendency of programs to refer to the same memory close in time. 
+2. **spatial locality** - refers to the tendency of programs to access memory that is close together in terms of address.
+
+Typical cache policies exploit both kinds of locality. It exploits temporal locality by putting your data in the cache after you use it, thinking you might use it again soon. It exploits spatial locality, by not just putting the address you needed into the cache, but the whole block that the address is part of in the cache. 
+
+<img src="resources/review_memory_systems/spatial_locality.png">
+
+**Blocks** are a division of memory in relatively small amounts. Often 64 bytes.
+
+## Mapping
+
+Given an address, how can I find out if that data is in the cache and how do I retrieve it? We will start with a direct-mapped cache and a little notation.
+
+Let's suppose we have 2^m addresses, 2^n block size, and we have 2^k cache entries.
+
+The lowest n-bits in an address are the **offset**. They **specify where within a given cache block the memory is**. The rest of the bits tell us the block number. 
+
+How do we know where to look for this block within the cache? We need some kind of hashing function. The next k bits of the address are called the **index**. They tell us where to look for our data within the cache. The higher order bits are called the **tag**. 
+
+<img src="resources/review_memory_systems/direct_mapping.png">
