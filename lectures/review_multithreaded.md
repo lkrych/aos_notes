@@ -69,3 +69,50 @@ What will happen with the print statements? They are undeterministic, the schedu
 What happens if we save the `whos_better` variable as a global variable?
 
 The threads will eventually agree on who is better because the threads share the global variable. Whichever thread runs second will become the better thread. Adding truth to the age-old adage that "first is the worst, second is the best". 
+
+## Joinable and Detached threads
+
+How does the memory for a thread get cleaned up after it finishes? Where does it's return value go? How can I make sure a thread finishes before the main thread finishes executing.
+
+There are two cases for termination of "our" thread:
+1. Any thread makes an exit call or main reaches the end of its code.
+2. Our thread returns or calls `pthread_exit()`.
+
+<img src="resources/multithreaded_resources/pthread_exit1.png">
+
+<img src="resources/multithreaded_resources/pthread_exit2.png">
+
+The distinction between joinable and detached threads is important for the second case where our thread returns or calls `pthread_exit()`. 
+
+A thread can either be created in a detached state or detached with a procedure call, `pthread_detach()`. 
+
+**When a detached thread reaches the end of its execution its memory is cleaned up and its return value disappears**. Moreover, we need to make sure that main doesn't finish first because our thread might not be done with its work!
+
+If we want to keep the detached thread going, we have to exit main with `pthread_exit()`.
+
+Alternatively, joinable threads don't get immediately obliterated after finishing execution. They stick around until another thread joins them. The joining thread makes a call to `pthread_join()`, specifying the thread it wants to join and an address to save the value of the threads work. `pthread_join()` blocks until the other thread finishes.
+
+Let's take a look at joinable threads:
+
+```c
+void* thread_proc(void* arg) {
+    printf("Hello from the created thread\n");
+
+    return NULL;
+}
+
+int main(int argc, char **argv) {
+    pthread_t thread;
+    void* retval;
+
+    pthread_create(&thread, NULL, thread_proc, NULL);
+
+    printf("Hello from the main thread.\n");
+
+    pthread_join(thread, &retval);
+    return 0;
+}
+```
+
+## Thread Patterns
+
