@@ -2,6 +2,12 @@
 
 ## Table of Contents
 * [Introduction](#introduction)
+* [Asynchronous Computation](#asynchronous-computation)
+* [Process/Thread Relationship](#process-thread-relationship)
+* [Posix Threads](#posix-threads-pthread)
+* [Joinable and Detached Threads](#joinable-and-detached-threads)
+* [Thread Patterns](#thread-patterns)
+* [Mutual Exclusion](#mutual-exclusion)
 
 ## Introduction
 
@@ -116,3 +122,22 @@ int main(int argc, char **argv) {
 
 ## Thread Patterns
 
+To give our threads something to do, let's imagine we are servicing some requests that are coming through a request queue.
+
+<img src="resources/multithreaded_resources/team_model.png">
+
+In the **team model**, we have a pool of worker threads that look into the queue, grab a request, and service it. This idea of a worker pool is common to many patterns. The cost of creating a new thread is high, so instead of creating/destroying threads. The application will simply let threads loaf around until there is something to do.
+
+<img src="resources/multithreaded_resources/dispatcher_model.png">
+
+A model similar to the team model is the **dispatcher model**. Here, instead of having a team of threads contending for access to the queue, there is an arbiter that finds an available worker and passes the request off to the worker.
+
+<img src="resources/multithreaded_resources/pipeline_model.png">
+
+Lastly, instead of dividing work by request, we can divide work by subtask. This is the strategy used by the pipeline model.
+
+## Mutual exclusion
+
+In threaded programming we use a **mutex** to make sure that threads don't interfere with each other!
+
+We use **conditional wait variables** allow you to take one thread off the scheduling queue until there is a signal from another thread that it should be put back on. This is useful for preventing deadlocks. 
