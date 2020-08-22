@@ -133,14 +133,92 @@ For write policies, we need to consider what happens when there is a cache hit, 
 
 <img src="resources/memory_systems_resources/write_through.png">
 
-One strategy is the **write-through policy**. That is we will write to the cache, and also to main memory to copy the data to keep the cache and memory consistent.
+One strategy is the **write-through policy**. That is we will write to the cache, and also to main memory to copy the data to keep the cache and memory consistent. This strategy is betting on quick eviction in the cache. No work needs to be done because main memory has already been updated.
 
 <img src="resources/memory_systems_resources/write_back.png">
 
-Another strategy is **write-back** where only the cache is written to. As long as no other processors need access to the data that is being written, it is find just to write to the cache (this is where the same processor will look first) and then write to main memory later when it is more convenient.
+Another strategy is **write-back** where only the cache is written to. As long as no other processors need access to the data that is being written, it is find just to write to the cache (this is where the same processor will look first) and then write to main memory when the cache block gets evicted. This strategy is betting that the cache will be used a lot without any evictions, bundling the writes to main memory will be more efficient than constantly writing through in a cache-hit heavy workload.
 
 ### Cache miss policies
 
 <img src="resources/memory_systems_resources/write_allocate.png">
 
+For cache misses we also have two strategies. The first is **write-allocate**, which first reads the current value from main memory into the cache and then behaves as if it were a hit using either of the two hit strategies.
+
 <img src="resources/memory_systems_resources/no_write_allocate.png">
+
+Lastly we have the **no-write allocate** strategy which writes directly to memory and doesn't bother with the cache at all.
+
+## Virtual Address Abstraction
+
+<img src="resources/memory_systems_resources/virtual_address.png">
+
+The **goal of the virtual memory system is to provide the abstraction that a process has the address space all to itself**. 
+
+Typically, organized as:
+
+1. We have addresses for the program code.
+2. We have addresses for variables that are initialized (literals).
+3. Space for uninitialized global variables.
+4. Space for the heap which is dynamically-allocated.
+5. Space for the user's stack.
+6. And spaces for the Kernel.
+
+### Virtual Address Translation
+
+The **key to maintaining the virtual memory abstraction** is **a layer of indirection**. Without this layer, two processes couldn't use the same address for a variable because they would end up overwriting each other. 
+
+So, to solve this problem we use a classic computer science trick, introduce a layer of indirection.
+
+Inside the OS, **each process has** a data structure called a **page table** that acts like a phone book, **translating from virtual memory address to physical memory address**. 
+
+Usually the physical address will be an address in main memory, but **when main memory is low, sometimes it will reference a disk address**. This is known as **swap**.
+
+This indirection allows us to accomplish a few things:
+
+1. It allows us to have an address space bigger than main memory. This is convenient when main memory isn't big enough and we need to use the disk, or when we need to map new storage devices.
+2. It provides protection between processes. With the OS properly managing the page tables, there is no risk of overwriting.
+3. It allows for sharing.
+4. Because **Kernel addresses** are the same for each process, they get their own page table, **the Global Page Table**.
+
+<img src="resources/memory_systems_resources/address_translation.png">
+
+### Paging
+
+Recall how for caches we divided it into blocks or cache lines. Similarly, with the virtual memory system we divide up our **physical memory into frames**, often 4KB long.
+
+The higher order bits in an address determine the page number (physical page frame), and the lower order bits determine the offset into the page. 
+
+Correspondingly, the **virtual address space is similarly divided into pages**. Again, lower order bits determine the offset, the higher ones determine the virtual page number. 
+
+<img src="resources/memory_systems_resources/paging.png">
+
+### Check for understanding
+
+<img src="resources/memory_systems_resources/page_quiz.png">
+
+The fact that we have a 512 byte page size means that we need 9 bits to reference the offset. That leaves us 7 bits a page number which means there are 2^7 = 128 page numbers.
+
+### Page Table Implementation
+
+The page table data structure translates virtual page numbers into physical page frames.
+
+<img src="resources/memory_systems_resources/page_table.png">
+
+Because representing an entire address space would take a lot of memory, page tables are constructed in a heirarchical way. The first ten bits are used to index into a top-level page directory which give us the base address of the page table that holds the translation we are looking for. We use the next ten bits to index into the lower-level page table, and the entry here gives us the physical page number.
+
+### Accelerating Address Translation
+
+So far we have described the address translation process as follows:
+
+1. The offset for the virtual address simply gets copied to the physical address. 
+2. In order to translate the virtual page number we do a lookup of the page table in memory which translates to a physical page frame.
+
+Won't going to memory for the page table every time we access a memory address be slow? Yep, but thankfully the page table entries might end up in our cache, but even more relevant, architects have created a **special cache called the Translation Lookaside Buffer (TLB) for storing page table entries**. 
+
+The TLB is indexed by virtual addresses. How does the TLB manage context switches? One virtual address in one address space might be mapped to a specific physical address, but the same virtual address in another address space might be mapped to a different physical address.
+
+There are a couple of ways of handling this problem:
+
+1. Some systems flush the TLB on context switch.
+2. Other systems track the address space ID in the TLB. 
