@@ -70,3 +70,29 @@ Token Ring is the only scheme that isn't efficient underneath a light load. That
 Let's look at how machines communicate across the Internet. This layer only uses the Internet Protocol (IP). 
 
 <img src="resources/networking_resources/ip.png">
+
+Every machine on the internet proper gets a **unique 32-bit address, an IP address** (For IPv6, it is 128 bits).
+
+Ranges of addresses are allocated by regional internet registries, all of which are under the control of IANA (International Assigned Number Authority).
+
+The ranges themselves are commonly specified by a 32-bit **IP followed by a slash and then the number of bits for a network ID**. This is called **CIDR** notation. The rightmost bits specify the particular host.
+
+<img src="resources/networking_resources/ip_addr.png">
+
+### Check for understanding - IP addresses
+
+<img src="resources/networking_resources/ip_quiz.png">
+
+`130.58.127.255`
+
+## LANs and NATs
+
+One solution to the problem of the scarcity of IP Addresses is **network address translation**. This also allows mobile devices to quickly join and exit networks as you are roaming around.
+
+Your modem/router **allocates IPs to internal entities via Dynamic Host Configuration Protocol (DHCP)**. It then exports a single visible public IP and then keeps a mapping between traffic going into and out of its boundary so that it can properly route traffic.
+
+<img src="resources/networking_resources/nat.png">
+
+## Internet Routing
+
+How are the hops between IP addresses determined?
