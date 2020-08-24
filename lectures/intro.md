@@ -26,7 +26,11 @@ In a more typical elaboration of the computer system, the system bus and the I/O
 
 ## OS functionality
 
-1. OS is a **resource manager**.
+1. OS is a **resource manager** that arbitrates amongst competing resources.
 2. OS **provides a consistent interface to the hardware resources**.
 3. OS **schedules application on the CPU**. 
+
+You can think of an OS like an **API for accessing hardware resources**. It's not too different from a web service accessing a backend API.
+
+<img src="resources/1_intro_resources/os_api.png">
 
