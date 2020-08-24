@@ -6,6 +6,8 @@
     * [I/O Bus](#hardware-organization-with-io-bus)
 * [OS Functionality](#os-functionality)
 * [Managing the CPU and Memory](#managing-the-cpu-and-memory)
+    * [Processor-related abstractions](#)
+    * [Memory-related abstractions](#)
 
 ## Hardware Resources
 
