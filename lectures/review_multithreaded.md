@@ -84,9 +84,9 @@ There are two cases for termination of "our" thread:
 1. Any thread makes an exit call or main reaches the end of its code.
 2. Our thread returns or calls `pthread_exit()`.
 
-<img src="resources/multithreaded_resources/pthread_exit1.png">
+<img src="resources/multithreaded_resources/thread_exit1.png">
 
-<img src="resources/multithreaded_resources/pthread_exit2.png">
+<img src="resources/multithreaded_resources/thread_exit2.png">
 
 The distinction between joinable and detached threads is important for the second case where our thread returns or calls `pthread_exit()`. 
 
