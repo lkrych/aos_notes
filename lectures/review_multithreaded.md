@@ -11,7 +11,7 @@
 
 ## Introduction
 
-<img src="resources/multithreaded_resources/parallel.png"
+<img src="resources/multithreaded_resources/parallel.png">
 
 Some tasks can be split up into independent pieces. This allows us to divide work amongst CPUs and save time! This is the beauty of parallel processing. 
 
@@ -19,7 +19,7 @@ Some tasks can be split up into independent pieces. This allows us to divide wor
 
 Even if you know that your application will only run on a single-core, single CPU, it can still be useful to have your program express parallelism. 
 
-<img src="resources/multithreaded_resources/async.png"
+<img src="resources/multithreaded_resources/async.png">
 
 The above model demonstrates the benefits of using a multithreaded programming paradigm, even in a single CPU system. This is because **we always gave the CPU something to do while we were waiting for asynchronous requests** to complete. This ensures that the page is loaded faster in a website. **Threads** make this possible.
 
@@ -29,7 +29,7 @@ In a multi-threaded environment, **each thread has its own stack, but it shares 
 
 So from an execution perspective, it acts like a process unto itself. The difference comes in that part of the memory is shared. This makes it easier for the threads to communicate, but also to step on eachother's toes. 
 
-<img src="resources/multithreaded_resources/process_thread.png"
+<img src="resources/multithreaded_resources/process_thread.png">
 
 It is also possible to do parallel programming without multiple threads through shared memory and message passing.
 
