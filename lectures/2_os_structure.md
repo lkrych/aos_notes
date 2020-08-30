@@ -67,3 +67,9 @@ In a microkernel, in principle, there is no distinction between regular applicat
 
 This gives us strong protection between all of the different layers of the microkernel. We have also gained extensibility. It's easy to mix and match new OS services by building the on top of the microkernel.
 
+One **downside of the microkernel approach is that there is a potential for performance loss** because we've introduced so many new boundaries (address spaces) between services. There is the potential for many more context switches in a microkernel architecture per system call than in a monolithic architecture.
+
+<img src="resources/2_os_structure_resources/microkernel_vs_monolith.png">
+
+Border crossings change the locality of the execution of the processor. Also, when are going across boundaries, there may be a need to copy from user space to system space. This can be slow as well.
+
