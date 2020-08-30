@@ -73,3 +73,38 @@ One **downside of the microkernel approach is that there is a potential for perf
 
 Border crossings change the locality of the execution of the processor. Also, when are going across boundaries, there may be a need to copy from user space to system space. This can be slow as well.
 
+<img src="resources/2_os_structure_resources/what_do_we_want_of_os.png">
+
+## The SPIN Approach
+
+Both the SPIN and the Exokernel approaches start with two basic premises:
+
+1. The microkernel design compromises on performance due to frequent border crossings.
+2. The monolithic design does not lend itself to extensibility because everything is built in one binary.
+
+Let's revisit what we are trying to achieve in an OS structure.
+* We want the OS to be thin, **there should only be mechanisms in the kernel, not policies** (like microkernel). 
+* The structure **should allow fine-grained access to system resources without border-crossing** too much (like DOS).
+* The OS should be flexible, resource management should be flexible (like microkernel) without sacrificing protection and performance (like monolithic). 
+
+### Approaches to Extensibility
+
+Historically, there has been interest in extensibility in OS's since 1981, when a team of researches from CMU introduced the Hydra OS. Hydra OS used kernel mechanisms for resource allocation. It provided access via **capabilities**, an entity that can be passed from one to another, it cannot be forged, and it can be verified. Capabilities are a heavy-weight mechanism. Resources managers were introduced as course-grained objects to reduce border crossing overheads.
+
+While in principle, Hydra had a thin design and used resource managers to reduce border crossings, the design did not lend itself to extensibility.
+
+One of the most well-known extensible OS's in the early days was the Mach operating system from CMU. It was microkernel based, providing very limited mechanisms in the kernel. It provided all the services above the kernel. It achieved its goal of extensibility and portability, but performance took a back seat. 
+
+### SPINs approach to extensibility
+
+SPIN's idea was to **co-locate the kernel and the extensions** (same hardware address space) so as **to avoid border crossing**. 
+
+SPIN relied on the characteristics of a **strongly-typed programming language to give guarantees** about how protected each process was. This is called **compiler-enforced modularity**. 
+
+SPIN uses **logical protection domains**, not hardware address spaces to protect the OS from services and the kernel.
+
+The flexibility of SPIN comes from **dynamic call binding**, different functions can be attached to the OS interface for a service. This makes extensions as cheap as a procedure call.
+
+### Logical Protection Domains
+
+Modula-3 is a strongly-typed language with built-in safety and encapsulation methods. It does automatic management of memory. It supports objects, threads, exceptions, and generic interfaces. 
