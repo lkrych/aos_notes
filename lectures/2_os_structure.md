@@ -4,6 +4,8 @@
 
 * [Introduction](#introduction)
 * [Goals of OS structure](#goals-of-os-structure)
+    * [Monolithic Architecture]()
+    * [DOS vs Monolithic]()
 
 ## Introduction
 
@@ -34,6 +36,8 @@ When this technique is used, each procedure is free to call any other procedure.
 
 **System calls** are exported by the OS  to applications to provide a well-defined **interface for interacting with hardware**. 
 
+### Comparing DOS to a Monolithic structure
+
 Microsoft's first OS, DOS (Disk Operating System), let applications have direct access to system services as procedure calls which gave the OS better performance. The problem with this design is that there wasn't much protection against errant applications corrupting the OS!
 
 <img src="resources/2_os_structure_resources/dos.png">
@@ -41,4 +45,25 @@ Microsoft's first OS, DOS (Disk Operating System), let applications have direct 
 
 Technically, this meant that the OS and the application code lived in the same address space. 
 
+The loss of protection to the OS in a DOS-like architecture is unacceptable in today's world. On the otherhand, monolithic architecture ensures this safety.
+
+One of the ways that the monolithic design aids in increasing performance is to consolidate all of its code into a single binary. This means that once a system call has transitioned application code from user space to kernel space, all of the code needed for the OS will be inside the same address space.
+
+What is lost in the monolithic structure is customization and flexibility. Everything is built into a single binary, there is no mix-and-match.
+
+### Microkernel-based Architecture
+
+The need for customization and the opportunity for customization is what spurred OS designers to create an OS structure that would allow for the customization of services offered by the OS.
+
+<img src="resources/2_os_structure_resources/microkernel.png">
+
+The basic idea behind the microkernel design is to a**chieve high reliability by splitting the OS into small well-defined modules**, **only one** which, the **microkernel, runs in kernel mode**. The others run as relatively powerless user processes.
+
+**Only mechanisms for accessing hardware (no policies) are situated in the microkernel**. These simple mechanisms include threads, address space and IPC.
+
+The OS services such as VM management, CPU scheduling, and the filesystem are implemented as servers on top of the microkernel. These services execute with the same privilege as the applications themselves. Each service is in it's own address space. 
+
+In a microkernel, in principle, there is no distinction between regular applications and system services that are executing as server processes on top of the microkernel.
+
+This gives us strong protection between all of the different layers of the microkernel. We have also gained extensibility. It's easy to mix and match new OS services by building the on top of the microkernel.
 
