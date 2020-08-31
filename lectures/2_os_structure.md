@@ -193,3 +193,43 @@ There are three methods:
 1. **Hardware Mechanisms** - specific hardware resources that can be requested by the the Library OS and can be bound to that Library OS by the exokernel and exported to the Library OS as an encrypted key. 
 2. **Software Caching** - At the point of context switch, the exokernel will dump the hardware TLB into a software TLB associated with the Library OS. This preserves access that has been granted to services/processes within that OS if the exokernel needs to switch to other processes.
 3. **Downloading code into Kernel** - Avoid border processing by importing specific code into the kernel address space. This is functionally-equivalent to the SPIN strategy, but is less safe because SPIN enforces compile-time checks.  
+
+### Default Core Services in the Exokernel
+
+<img src="resources/2_os_structure_resources/exokernel_pagefault.png">
+
+A process running on behalf of an application will not have access to update a TLB, so a page fault will percolate up through the exokernel to fetch the page that needs to be mapped in the TLB.
+
+### Secure Binding
+
+The Library OS is given the opportunity to drop arbitrary code into the kernel. The rational for this ability is performance. This is dangerous! So how do we make it as safe as possible?
+
+### Software Caching
+
+<img src="resources/2_os_structure_resources/soft_tlb.png">
+
+When we have a context switch, one of the **biggest sources of performance loss is that we lose locality**. Since the address spaces of different processes are necessarily different, we have to flush out the entire TLB. 
+
+One strategy for reducing overhead is maintaining **in-memory data structures that operate as snapshots of the TLB for different processes**. 
+
+When a context switch happens, the exokernel preloads the TLB with the software TLB that is associated with the new process.
+
+### CPU scheduling
+
+In order to facilitate the core service of CPU scheduling, the exokernel maintains a linear vector of "time slots". 
+
+<img src="resources/2_os_structure_resources/exokernel_scheduling.png">
+
+Time is divided into quantums/epochs. The time quantums represent the time allocated to the Library OS/process that is operating on top of the exokernel. Each process gets to mark its time quantum in the vector. 
+
+Thus CPU scheduling is as simple as keeping track fo what time it is and looking up in the vector which process should be running.
+
+If a process misbehaves and takes a little more time than it should, the scheduler remembers and adds a penalty in subsequent scheduled execution so that execution time remains fair between processes.
+
+### Revocation of Resources
+
+Notice that the exokernel doesn't support abstractions. It only has mechanisms for securely giving resources to the Library OS/process. 
+
+Therefore the OS needs a way to revoke resources that have been allocated to a Library OS/process. To do this, the exokernel maintains a table of what resources are allocated to which OS/process.
+
+The exokernel uses the `revoke()` mechanism to revoke access to specific resources in a Library OS. The exokernel gives the Library OS time to take corrective action when a `revoke()` call is made. 
