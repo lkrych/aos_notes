@@ -108,3 +108,23 @@ The flexibility of SPIN comes from **dynamic call binding**, different functions
 ### Logical Protection Domains
 
 Modula-3 is a strongly-typed language with built-in safety and encapsulation methods. It does automatic management of memory. It supports objects, threads, exceptions, and generic interfaces. 
+
+OS services are packaged up in Modula-3 objects which gives some guarantees of a protected interface. This allows for both protection and performance. 
+
+Objects that implement the specific services can be fine-grained, or they can be collections of interfaces. All of these are accessible via capabilities. **Capabilities are implemented as pointers in Modula-3**, which means they are much lighter-weight. Modula-3 pointes are type-specific which makes them easier to guard.
+
+### SPIN Mechanisms for Domain Protection
+
+There are three mechanisms in SPIN to create protection domains. Write your code in Modula-3 and use these three mechanisms.
+
+1. `create()` - initiates an object with contents and exports names that are contained as entry point methods to be visible outside the object. This creates logical protection domains.
+2. `resolve()` - if one protection domain wants to use the name of another protection domain, it can accomplish this using the resolve primitive, which is **very similar to linking two separately compiled files together**(compiler process). **Once resolved, resource sharing is done at memory speeds**.
+3. `combine()` - to reduce the profileration of small logical protection domains, you can combine domains and aggregate them using combine.
+
+This is the secret sauce of SPIN, everything hinges on the strongly-typed nature of Modula-3.
+
+The upshot of the logical protection domain, is the **ability to extend SPIN to include OS services and make them all part of the same hardware address space**. No border-crossings!
+
+<img src="resources/2_os_structure_resources/spin.png">
+
+This image demonstrates the flexibility of the extensions, here we see two separate extensions (individual OS's) that can share components. 
