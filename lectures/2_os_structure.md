@@ -165,3 +165,31 @@ Physical memory is a precious resource. SPIN provides interfaces for extending p
 Core services are trusted services since they provide access to hardware mechanisms. This means they might have to step outside the language-enforced protection model to control the hardware-resources. In other words, the applications that run on top of an extension have to trust that extension.
 
 ## The Exokernel Approach
+
+The **exokernel** approach to extensibility is that the **kernel exposes hardware explicitly to the OS extensions** living above it. 
+
+**Decouple authorization of the hardware with its actual use.**
+
+<img src="resources/2_os_structure_resources/exokernel.png">
+
+1. The library OS asks for a resource from the exokernel. 
+2. Validates the request from the library and binds the request to the specific hardware resource.
+3. This exposes the hardware through a secure binding
+4. The exokernel then creates an encrypted key for the resource and gives it to the requesting service. 
+5. Finally, the library uses the keys to access the hardware.
+
+In this system, the creation of the keys is the computationally expensive procedure, but the use of the keys is much cheaper.
+
+Let's look at an example of a resource: a TLB entry. Imagine you want to add a TLB entry to the hardware TLB. 
+
+1. Virtual to physical mapping is done by the library that wants to add the entry.
+2. Once that mapping has been done, it presents this mapping to the exokernel, along with the key that it has for the TLB.
+3. The exokernel validates this request and then on behalf of the user process, adds the entry to the hardware.
+4. The process that is going to use this page can now use this entry without exokernel intervention. (putting the entry in required intervention, but use of the entry doesn't require exokernel intervention)
+
+### Implementing secure bindings with exokernel
+
+There are three methods:
+1. **Hardware Mechanisms** - specific hardware resources that can be requested by the the Library OS and can be bound to that Library OS by the exokernel and exported to the Library OS as an encrypted key. 
+2. **Software Caching** - At the point of context switch, the exokernel will dump the hardware TLB into a software TLB associated with the Library OS. This preserves access that has been granted to services/processes within that OS if the exokernel needs to switch to other processes.
+3. **Downloading code into Kernel** - Avoid border processing by importing specific code into the kernel address space. This is functionally-equivalent to the SPIN strategy, but is less safe because SPIN enforces compile-time checks.  
