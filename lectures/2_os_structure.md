@@ -142,4 +142,26 @@ SPIN supports these events using an **event-based communication model**. Service
 
 An example of this is a protocol stack. There might be several interfaces for network connections, say ethernet and ATM. These packets arrive on one of these ports and this arrival is considered an event.
 
-Both of those packets might be IP packets, so the event is handled by the IP handler, which looks at the events and decides which event handler to hand it off to: ICMP, UDP, or TCP.
+Both of those packets might be IP packets, so the event is handled by the IP handler(many:1), which looks at the events and decides which client (1:many) to hand it off to: ICMP, UDP, or TCP.
+
+### Default Core Services in SPIN
+
+Physical memory is a precious resource. SPIN provides interfaces for extending physical memory management.
+
+1. Physical address - allocation, deallocation, and reclamation.
+2. Virtual address - allocation and deallocation.
+3. Translation -  Create/destroy address spaces, add or remove mapping between virtual/physical pages.
+4. Event Handlers - page fault, access fault.
+
+**SPIN provides interface functions in header files** for adding your own custom policies to these core services of an OS. 
+
+
+**SPIN also arbitrates the CPU** It only arbitrates at a macro-level the amount of time that is given to a particular extension. That is done through the SPIN global scheduler.
+
+1. SPIN abstraction - Strand (thread abstraction defined by SPIN as a unit of scheduling). The semantics of the Strand is defined by the extension.
+2. Event Handlers - block, unblock, checkpoint, resume
+3. SPIN global scheduler - interacts with application threads package to allocate the time slice. 
+
+Core services are trusted services since they provide access to hardware mechanisms. This means they might have to step outside the language-enforced protection model to control the hardware-resources. In other words, the applications that run on top of an extension have to trust that extension.
+
+## The Exokernel Approach
