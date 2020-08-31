@@ -128,3 +128,18 @@ The upshot of the logical protection domain, is the **ability to extend SPIN to 
 <img src="resources/2_os_structure_resources/spin.png">
 
 This image demonstrates the flexibility of the extensions, here we see two separate extensions (individual OS's) that can share components. 
+
+### SPIN mechanisms for events
+
+An OS has to field external events. For example, external interrupts that come in as a process is executing, or the process itself may incur some exceptions that cause an interrupt in its own execution. All of these are events that an OS has to support.
+
+<img src="resources/2_os_structure_resources/spin_event_handler.png">
+
+SPIN supports these events using an **event-based communication model**. Services register event handlers with the SPIN event dispatcher. SPIN supports several types of mapping:
+* 1:1 mapping between an event and handler
+* 1:many mapping between an event and handlers
+* many:1 mapping to the same handler. 
+
+An example of this is a protocol stack. There might be several interfaces for network connections, say ethernet and ATM. These packets arrive on one of these ports and this arrival is considered an event.
+
+Both of those packets might be IP packets, so the event is handled by the IP handler, which looks at the events and decides which event handler to hand it off to: ICMP, UDP, or TCP.
