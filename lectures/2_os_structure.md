@@ -233,3 +233,15 @@ Notice that the exokernel doesn't support abstractions. It only has mechanisms f
 Therefore the OS needs a way to revoke resources that have been allocated to a Library OS/process. To do this, the exokernel maintains a table of what resources are allocated to which OS/process.
 
 The exokernel uses the `revoke()` mechanism to revoke access to specific resources in a Library OS. The exokernel gives the Library OS time to take corrective action when a `revoke()` call is made. 
+
+### Exokernel Data Structures
+
+<img src="resources/2_os_structure_resources/exokernel_problems.png">
+
+In order to know how to deal with any kinds of interrupts in program execution, the exokernel must maintain data structures that link running processes with the proper Library OS/applications running a top of it.
+
+The exokernel maintains a data structure called the **PE data structure**. It contains the **handler entrypoints to the Library OS for dealing with the different kinds of program discontinuities**, like page faults, exceptions, interrupts, etc. It additionally maintains software TLBs and other mappings that allow for fast execution.
+
+<img src="resources/2_os_structure_resources/exokernel_ds.png">
+
+## L3 Microkernel Approach
