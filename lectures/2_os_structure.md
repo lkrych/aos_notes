@@ -245,3 +245,23 @@ The exokernel maintains a data structure called the **PE data structure**. It co
 <img src="resources/2_os_structure_resources/exokernel_ds.png">
 
 ## L3 Microkernel Approach
+
+Both the SPIN and the exokernel approach were built with the assumption that the microkernel design was inherently poised for poor performance.
+
+Why? They used a common microkernel approach, Mach that favored portability over performance. Let's look at a microkernel design that tries to keep performance in the forefront.
+
+<img src="resources/2_os_structure_resources/microkernel_review.png">
+
+A **microkernel** provides a **small number of simple abstractions** and **all the system services that you normally expect from an OS are implemented as processes above the microkernel**, they run at the same privilege-level as user-level applications. Only the microkernel runs at a different level of privilege. 
+
+In order for services to communicate with each other, they need to utilize IPC.
+
+### Potentials for Performance Loss in a Microkernel
+
+The main source of performance loss is **border crossings** in the microkernel design. They have both an explicit cost (making system calls from application processes to the microkernel) and implicit costs (border crossings between services).
+
+<img src="resources/2_os_structure_resources/protected_procedure.png">
+
+**Protected procedure calls** are made between services. Because they go across address spaces, they are much less efficient than normal procedure calls. 
+
+The implicit cost of border crossing is the fact that we are **losing locality** both in terms of **address translations in the TLB**, as well as the **contents of the cache** that the processor uses to access memory. 
