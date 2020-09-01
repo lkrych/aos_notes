@@ -265,3 +265,44 @@ The main source of performance loss is **border crossings** in the microkernel d
 **Protected procedure calls** are made between services. Because they go across address spaces, they are much less efficient than normal procedure calls. 
 
 The implicit cost of border crossing is the fact that we are **losing locality** both in terms of **address translations in the TLB**, as well as the **contents of the cache** that the processor uses to access memory. 
+
+### L3 Microkernel
+
+The L3 microkernel was built to prove that a microkernel doesn't need to have bad performance. 
+
+<img src="resources/2_os_structure_resources/l3_micro.png">
+
+The key distinction of L3 is that **each OS service is in its own protection domain**. Not necessarily its own hardware address space. 
+
+The point L3 establishes is that there are ways to construct a microkernel efficiently knowing the features of the hardware platform. 
+
+### Strikes against a Microkernel
+
+<img src="resources/2_os_structure_resources/microkernel_costs.png">
+
+1. **Kernel-user switches** - border crossings are expensive, this happens every time a user level process makes a system call. 
+2. **Address Spaces switches** - Each system service lives in its own address space, any system call that triggers action that needs to take place across OS services is going to incur address space context switch performance penalties.
+3. **Thread switches and IPC** - Thread switches need to be mediated by the kernel. This will happen in service-to-service communication.
+4. **Memory Effects** - an implicit cost, the loss of locality when doing many context switches.
+
+L3 debunks each of these strikes. Let's look at how it does this. 
+
+The first thing it does is debunking the border-crossing myth. The implementors of L3 found that they can accomplish border crossing in 123 process cycles, this includes TLB/cache misses. 
+
+Let's now debunk the address switch costs of going across protection domains.
+
+The appropriate question to ask here is **if we have to throw away/flush all entries in the TLB** when we want to move across protection domains. The answer is that it depends. 
+
+If the TLB keeps track of address space, then we don't have to flush all of the TLB. This is called **address space tagged TLBs**. 
+
+Virtual addresses are being generated on behalf of a particular process. When we make an entry into the TLB is not only the tag with a particular virtual address, but also the PID for the entry.
+
+When a TLB entry is looked up, both the address and the PID are checked. The hardware disambiguates the entries per process using PID, this means the whole TLB doesn't have to be flushed in a context switch.   
+
+<img src="resources/2_os_structure_resources/as_tagged_tlb.png">
+
+Liedtke, the author of the L3 microkernel, had some suggestions for exploiting the hardware to avoid TLB flushing even if the TLB is not AS/PID tagged.
+
+In particular, the architecture might support segment registers (which bound the legal virtual addresses of a running process). You can carve out individual protection domains in the linear address space. 
+
+<img src="resources/2_os_structure_resources/segment_registers.png">
