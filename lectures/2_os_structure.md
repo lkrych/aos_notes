@@ -4,8 +4,10 @@
 
 * [Introduction](#introduction)
 * [Goals of OS structure](#goals-of-os-structure)
-    * [Monolithic Architecture]()
-    * [DOS vs Monolithic]()
+    * [Monolithic Architecture](#monolithic-architecture)
+    * [DOS vs Monolithic](#comparing-DOS-to-a-monolithic-structure)
+    * [Microkernel Architecture](#microkernel-based-architecture)
+* [SPIN](#the-spin-approach)
 
 ## Introduction
 
@@ -306,3 +308,31 @@ Liedtke, the author of the L3 microkernel, had some suggestions for exploiting t
 In particular, the architecture might support segment registers (which bound the legal virtual addresses of a running process). You can carve out individual protection domains in the linear address space. 
 
 <img src="resources/2_os_structure_resources/segment_registers.png">
+
+What if the protection domain is so large that it needs the entire hardware address space? If this is the situation, then the TLB needs to be flushed on a context switch. 
+
+Switching between small protection domains can actually be pretty efficient. On the other hand if the switch is from a large protection domain to another, the switching cost is not that significant, BUT the loss of locality is significant (TLB misses and cache misses).
+
+
+The third myth about microkernel performance is that thread **switching and IPC is expensive**. The explicit cost in this case is saving all the volatile state of a processor into the thread context block. L3 shows that this can be competitive to the SPIN and exokernel design.
+
+### Memory Effects
+
+The last **myth is around the assertion that microkernels will lose locality much more than a monolithic design**.
+
+Because of demand paging design, the entire hardware address space is probably not all-in memory. What the criticism of the microkernel design above means, is that within a demand-paged OS design with a typical CPU hierarchy, **how warm are the caches when we context switch**?
+
+<img src="resources/2_os_structure_resources/microkernel_memory_effects.png">
+
+When we have small protection domains, it will probably be pretty good. This begs the question, why was border crossing so bad in Mach?
+
+The reason is that it was focused on portability, the code was bloated which led to a **larger memory footprint**. This meant that the protection domains were larger and thus there were more cache misses.
+
+### L3 Summary
+
+The L3 paper's importance lies in its debunking of the belief that microkernel OS design is inefficient. The first principal advocated by L3 is that the OS should have minimal abstractions: address space, threads, IPC, UID. These are abstractions that are needed by any subsystem. 
+
+If you want an efficient implementation of a microkernel, you need to be processor-specific. This means that microkernels are non-portable. 
+
+The right set of kernel abstractions and processor-specific implementation allows microkernels to be efficient. Then **other services can be built in processor-independent ways** on top of the microkernel.
+
