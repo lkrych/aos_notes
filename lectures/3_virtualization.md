@@ -54,3 +54,47 @@ The percentage of the guest OS code that needs to be modified is miniscule, less
 ### Big Picture
 
 In either virtualization circumstance we need to virtualize the hardware resources and make them safely available to the guest OS's. The hardware resources are the memory hierarchy, the CPU and the devices in the hardware platform.
+
+## Memory Virtualization
+
+Caches are physically tagged so you don't have to do too much about handling them in a virtualized space. The really thorny issue comes in handling virtual memory -- The virtual address to the physical address mapping.
+
+Recall that in any modern OS, each process is in its own protection domain and usually its own hardware address space. The OS maintains a **page table** for each process, and it is the **OS data structure** that holds the **mapping between the virtual pages and the physical pages**.
+
+<img src="resources/3_virtualization/memory_system.png">
+
+The physical memory is contiguous starting from 0 to the max of the hardware. The virtual address space is not contiguous, it is scattered all over the physical memory. This is the advantage of page-based memory systems.
+
+### Memory Virtualization in a Virtualized Environment
+
+In the virtualized setup, the hypervisor sits between the guest OS and the hardware. Thus the picture gets more complicated. Inside each guest OS are user-level processes, and each process is in its own protection domain. That means within each guest OS there is a distinct PT for each process within the guest OS. 
+
+Does the hypervisor know about these page tables? No, it doesn't! So how does it manage?
+
+<img src="resources/3_virtualization/machine_memory.png">
+
+
+The guest OS's think of physical memory as contiguous, but unfortunately the real physical memory (machine memory), is in control of the hypervisor, not the guest OS. Thus **the physical memory being managed by each guest OS is an illusion in a virtualized environment**. 
+
+So what is going on within a given guest OS?
+
+The process address space within an OS is an illusion, the physical memory that the OS thinks it has is actually being managed by the hypervisor. 
+
+Remember, the page table is a data structure that is managed for each process within an OS that handles the mapping between a Virtual Page Number and the Physical Page Number. This is how a typical OS behaves.
+
+<img src="resources/3_virtualization/shadow_pagetable.png">
+
+In a virtualized setting we have **another level of indirection whereby each physical page number in an OS has to be mapped to machine memory**,machine page numbers.
+
+The mapping between the **physical page number and the machine page number** is maintained in another page table called the **shadow page table**. 
+
+Thus in a virtualized setting there is a two-step translation process to go from VPN to MPN. In the case of a fully-virtualized hypervisor, the shadow page table is kept in the hypervisor. In a paravirtualized setting, the guest OS knows it is not running on the hypervisor. It can thus house the mapping. 
+
+### Shadow Page Table
+
+<img src="resources/3_virtualization/pagetable.png">
+
+In many architectures, the CPU uses the page table for address translation. What that means is that presented with a virtual address, the CPU first checks the TLB to see if there is a match for the VPN. If there is a match, there is a hit and it can translate to a physical address. If there is a miss the CPU goes to the page table in main memory and retrieves the entry for the virtual address. 
+
+The hardware PT is really the shadow page table in the virtualized setting if the architecture is going to use the page table for address translation.
+
