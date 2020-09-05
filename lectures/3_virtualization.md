@@ -98,3 +98,7 @@ In many architectures, the CPU uses the page table for address translation. What
 
 The hardware PT is really the shadow page table in the virtualized setting if the architecture is going to use the page table for address translation.
 
+<img src="resources/3_virtualization/shadow_translation.png">
+
+How does the hypervisor make the two-step translation process efficient? This will happen in every memory access!
+
