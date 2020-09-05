@@ -102,3 +102,42 @@ The hardware PT is really the shadow page table in the virtualized setting if th
 
 How does the hypervisor make the two-step translation process efficient? This will happen in every memory access!
 
+The guest OS makes the mapping between a virtual page number and a physical page number by creating an entry in the page table for the process that is generating the virtual address. Updating the page table is a privileged instruction, when the guest OS tries to update the page table, it will result in a trap into the hypervisor. The hypervisor then updates the shadow page table and keeps the mapping there. Basically this means we just bypass the guess OS page table.
+
+<img src="resources/3_virtualization/efficient_shadow.png">
+
+### Efficient mapping in a paravirtualized space
+
+How does this work in a paravirtualized hypervisor? In a paravirtualized system, the OS knows that its physical memory is not contiguous, thus the burden of **mapping can be shifted to the guest OS** itself.
+
+Now the guest OS is going to maintain contiguous physical memory, but it is also going to know that its notion of physical memory is not the same as machine memory.
+
+<img src="resources/3_virtualization/paravirtualization_mapping.png">
+
+In Xen, the guest OS makes **hypercalls** into the hypervisor to tell it about changes to the hardware page table. The hypervisor doesn't know anything about the processes within the guest OS, it just follows the hypercalls of the **guest OS to manage the hardware**.
+
+All the things that an OS would have to do sitting on bare metal are exactly things that a hypervisor must be able to do for its guest OS's.
+
+### Dynamically increasing memory
+
+How do we dynamically increase the amount of physical memory to an OS running atop a hypervisor? The hypervisor must be able to allocate memory on-demand to the requesting OS. 
+
+If all the memory is allocated, how does the hypervisor distribute memory? Well, naturally it doesn't just take the memory from a peer, that would be rude and could lead to service degradation. It asks nicely.
+
+That's the idea behind a technique called **ballooning**. This entails having a **special device driver installed into the guest OS** called a balloon.
+
+<img src="resources/3_virtualization/ballooning.png">
+
+Let's say that another guest OS needs memory. The hypervisor talks to the balloon inside a different guest OS. It tells the device driver to inflate, make requests to the guest OS to give it more memory. Since the amount of physical memory is infinite, if one process (the balloon driver) asks for more memory, the guest has to get rid of unwanted memory by paging out to disk unwanted pages. This reduces the memory footprint of the guest OS. Once the balloon driver has pushed memory out of the guest OS, it will return the memory to the hypervisor.
+
+<img src="resources/3_virtualization/ballooning2.png">
+
+
+The opposite situation is where the hypervisor has memory to give to the guest OS. The way it does this is by deflating the balloon. It contacts the balloon driver and tells it to contract its memory footprint. This releases memory into the guest OS. This means the guest OS will have more memory and will be able to page in the working set from disk.
+
+Ballooning assumes implicit cooperation with the guest OS by controlling the balloon driver.
+
+This technique is used in fully virtualized and paravirtualized environments.
+
+### Shared memory across virtual machines
+
