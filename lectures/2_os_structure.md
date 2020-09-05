@@ -8,6 +8,27 @@
     * [DOS vs Monolithic](#comparing-DOS-to-a-monolithic-structure)
     * [Microkernel Architecture](#microkernel-based-architecture)
 * [SPIN](#the-spin-approach)
+    * [Approaches to Extensibility](#approaches-to-extensibility)
+    * [SPIN's Approach to Extensibility](#spins-approach-to-extensibility)
+    * [Logical Protection Domains](#logical-protection-domains)
+    * [Domain Protection](#spin-mechanisms-for-domain-protection)
+    * [Events](#spin-mechanisms-for-events)
+    * [Default Services](#default-core-services-in-spin)
+* [Exokernel](#the-exokernel-approach)
+    * [Implementing Secure Bindings](#implementing-secure-bindings-with-exokernel)
+    * [Default Services](#default-core-services-in-the-exokernel)
+    * [Secure Binding](#secure-binding)
+    * [Software Caching](#software-caching)
+    * [CPU Scheduling](#cpu-scheduling)
+    * [Revocation](#revocation-of-resources)
+    * [Data Structures](#exokernel-data-structures)
+* [L3 Microkernel](#l3-microkernel-approach)
+    * [Performance loss in a microkernel?](#potentials-for-performance-loss-in-a-microkernel)
+    * [Introduction to L3](#l3-microkernel)
+    * [In defense of a microkernel](#strikes-against-a-microkernel)
+    * [Memory Effects](#memory-effects)
+    * [L3 Summary](#l3-summary)
+
 
 ## Introduction
 
