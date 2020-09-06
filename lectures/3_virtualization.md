@@ -154,5 +154,32 @@ An alternative is to achieve the same effect but in a way that makes the guest O
 
 The idea is to use content-based sharing. To do this, the **hypervisor maintains a hash table that contains a content hash of the machine pages**. If you hash the content of the machine memory page, you get a signature, and that signature is stored in the table. This allows the hypervisor to compare pages and see if it can have the VM's share the memory. 
 
-Remember a content hash represents the content of the page at the time it was saved. It's possible that the hash is out of date, so the hypervisor needs to inspect collisions to really make sure that the shared pages are identical.
+Remember a content hash represents the content of the page at the time it was saved. It's possible that the hash is out of date, so the hypervisor needs to inspect collisions to really make sure that the shared pages are identical. Once we've confirmed, we modify the hypervisor data structure to indicate that two VMs share the page. They also signal to the guest OS that the two pages in the respective OS needs to be copy-on-write.
 
+This activity is done as a background activity. We don't want to do this when there is active usage of the system. 
+
+### Memory Allocation Policies
+
+A higher level issue is the policy we need to use to allocate and reclaim memory from the domains that we've allocated memory to in the first place. Ultimately, the goal of virtualization is to maximize the utilization of resources. Memory is a previous resource.
+
+Virtualized environments might use different policies:
+
+1. **Pure share-based approach** - you pay less, you get less. The problem with this approach is that it can lead to hoarding. This is wasteful
+2. **Working-set based approach** - If the working-set of a VM goes up, then it is given more memory. If it shrinks, give the memory to someone else. The only problem with this approach is that it ignores the fact that there are pay tiers. 
+3. **Dynamic idle-adjusted shares approach** - Tax the hoarders more than the active pages. If you are hoarding resources and wasting them, we will take them away with you. By having an expensive tax rate (but not 100%), we can reclaim most idle memory. This also allows for sudden working set increases for the people who pay more for resources. 
+
+## CPU virtualization
+
+The challenge in virtualizing the CPU and the devices is giving the illusion to the guest OS's that they own the resources when in reality they are protected and managed by the hypervisor.
+
+Each guest OS is already multiplexing processes onto a single CPU. That means each guest OS has a ready queue that is ready to give work to the CPU.
+
+The first part of what the hypervisor has to do is **give the illusion to the guest OS that it owns the CPU**. 
+
+From the hypervisor's perspective, it needs to have a precise method for accounting the time that a particular VM uses on the CPU, from the point of view of billing each customer. It worries that it is sharing equally amongst the guest OS's. The **hypervisor doesn't care about the individual scheduling policy within the guest OS**. 
+
+<img src="resources/3_virtualization/cpu_virtualization.png">
+
+One straightforward way of sharing the CPU is to give a **proportional share** of the CPU for each guest OS commensurate with the service agreement that the VM has with the hypervisor. Another approach is to use a **fair-share scheduler**. Both of these strategies are straightforward mechanisms.  
+
+In either of these cases, the hypervisor has to account for the time used on the CPU on behalf of a different guest during the allocated time for a particular guest: say an external CPU interrupt comes in.
