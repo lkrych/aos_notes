@@ -141,3 +141,18 @@ This technique is used in fully virtualized and paravirtualized environments.
 
 ### Shared memory across virtual machines
 
+<img src="resources/3_virtualization/shared_memory.png">
+
+Typically separation of virtual memory is a security must, but in some cases, it can be more efficient for virtual machines to **share across the machine memory**. This maximally utilizes the machine memory.
+
+One way of doing this sharing is by enabling cooperation between the guest OS's and the hypervisor. The guest OS has hooks that allows the hypervisor to mark pages as copy-on-write and have the PPN's in each linux page table point to the same location in machine memory. The minute that either of the sharing machines tries to modify the shared page, the OS makes a copy of it and the hypervisor will redirect the PPN of that machine to point to this new copy.
+
+An alternative is to achieve the same effect but in a way that makes the guest OS completely oblivious to the underlying shared machine memory.
+
+<img src="resources/3_virtualization/vm_oblivious.png">
+
+
+The idea is to use content-based sharing. To do this, the **hypervisor maintains a hash table that contains a content hash of the machine pages**. If you hash the content of the machine memory page, you get a signature, and that signature is stored in the table. This allows the hypervisor to compare pages and see if it can have the VM's share the memory. 
+
+Remember a content hash represents the content of the page at the time it was saved. It's possible that the hash is out of date, so the hypervisor needs to inspect collisions to really make sure that the shared pages are identical.
+
