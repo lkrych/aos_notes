@@ -1,5 +1,7 @@
 # Operating Systems Structure
 
+![](https://media.giphy.com/media/duatwzNErHFKw/giphy.gif)
+
 ## Table of Contents
 
 * [Introduction](#introduction)
