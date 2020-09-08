@@ -183,3 +183,49 @@ From the hypervisor's perspective, it needs to have a precise method for account
 One straightforward way of sharing the CPU is to give a **proportional share** of the CPU for each guest OS commensurate with the service agreement that the VM has with the hypervisor. Another approach is to use a **fair-share scheduler**. Both of these strategies are straightforward mechanisms.  
 
 In either of these cases, the hypervisor has to account for the time used on the CPU on behalf of a different guest during the allocated time for a particular guest: say an external CPU interrupt comes in.
+
+Another part of virtualizing the CPU is being able to **deliver events to the correct guest OS**.
+
+Once a process has been scheduled on the shared CPU, everything should be happening at hardware speeds (using the clever tricks we talked about earlier). The quick translation of memory addresses is the most crucial component of having efficient computation happen on the shared CPU.
+
+
+<img src="resources/3_virtualization/cpu_events.png">
+
+System calls, page faults, exceptions and external interrupts (asynchronous) are all program discontinuities that require communication with the guest OS. Thus we need a way to deliver events from the shared CPU to the correct guest OS. This is common between both fully virtualized environments and paravirtualized environments.
+
+All of these events will be packaged as software interrupts from the hypervisor to the guest OS. OS's know what to do with this, so nothing much has to be done in the guest OS.
+
+One thorny bit about this situation is that some of the handler-specific procedures for these events in the guest OS might require privileged access to the CPU. This is a problem, especially in a fully-virtualized environment because the guest OS doesn't know it doesn't have the privileges!
+
+Some instructions that should be executed in a privileged state, fail silently when executed in an unprivileged state. This unfortunate fact is dependent upon the CPU architecture (older versions of x86 architecture). This isn't a problem in a paravirtualized guest. 
+
+The solution to this problem is binary translation. The hypervisor reads and catches instructions that could be problematic and replaces them on the fly. Newer versions of x86 don't have this problem.
+
+Communication between the guest OS and the hypervisor is always done implicitly via traps in a fully virtualized environment. Between a paravirtualized environment and the hypervisor is done via hypercalls. 
+
+## Device Virtualization
+
+In the case of **full virtualization**, the OS thinks that it has full control over all devices. The hypervisor uses the **trap-and-emulate** technique to give the guest OS the illusion that it has full access to the device. There are a lot of details they hypervisor has to worry about to ensure the legality of the I/O operation. 
+
+<img src="resources/3_virtualization/device_io.png">
+
+
+The paravirtualized setting is more interesting. The I/O devices seen by a guest OS in this virtualization mode are exactly the ones that are available to the hypervisor. Shared buffers are used to prevent copying between the hypervisor and guest OS's.
+
+The two things we need to worry about with device virtualization are:
+1. How to transfer control between the guest OS and the hypervisor. Devices being hardware entities, can only be accessed in a privileged state.
+2. How is data transfer done between the hypervisor and the guest OS. The hypervisor and the guest OS are in different address spaces. 
+
+### Control Transfer
+
+Control transfer in a fully virtualized system happens:
+
+1. guest->hypervisor: via traps (implicitly)
+2. hypervisor->guest: via software interrupts (events)
+
+In a paravirtualized setting:
+
+1. guest->hypervisor: via hypercalls (explicitly)
+2. hypervisor->guest: via software interrupts (events)
+
+The additional facility you have in a paravirtualized environment is that the guest has control via hypercalls on when event notifications are delivered. This is not the case in full virtualized environments.
