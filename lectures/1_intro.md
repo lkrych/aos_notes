@@ -1,5 +1,7 @@
 # Introduction to Advanced Operating Systems
 
+![](https://media.giphy.com/media/3aGZA6WLI9Jde/giphy.gif)
+
 ## Table of Contents
 
 * [Hardware Resources](#hardware-resources)
@@ -7,7 +9,7 @@
 * [OS Functionality](#os-functionality)
 * [Managing the CPU and Memory](#managing-the-cpu-and-memory)
     * [Processor-related abstractions](#processor-related-abstractions)
-    * [Memory-related abstractions](#memory-related-abstractions d)
+    * [Memory-related abstractions](#memory-related-abstractions)
 
 ## Hardware Resources
 

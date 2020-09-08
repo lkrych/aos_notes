@@ -1,5 +1,7 @@
 # Advanced Operating Systems
 
+![](https://media.giphy.com/media/sULKEgDMX8LcI/giphy.gif)
+
 ## Table of Contents
 
 * Review
@@ -9,12 +11,12 @@
     * [Networking](lectures/review_networking.md)
 
 * [Introduction to Advanced OS](lectures/1_intro.md)
-* Operating System Structure Overview
+* Operating System Structure Overview(lectures/2_os_structure.md)
     * [Introduction]()
     * [The SPIN approach]()
     * [The Exokernel Approach]()
     * [The Microkernel Approach]()
-* Virtualization
+* Virtualization(lectures/3_virtualization.md)
     * [Introduction]()
     * [Memory Virtualization]()
     * [CPU and Device Virtualization]()
