@@ -1,6 +1,29 @@
 # Virtualization
 
+![](https://media.giphy.com/media/3rVfBUa9f0RErtMZBH/giphy.gif)
+
 ## Table of Contents
+
+* [Platform Virtualization](#platform-virtualization)
+    * [Hypervisors](#hypervisors)
+    * [Full Virtualization](#full-virtualization)
+    * [Paravirtualization](#paravirtualization)
+    * [Big Picture](#big-picture)
+* [Memory Virtualization](#memory-virtualization)
+    * [Virtualized Virtual Memory](#memory-virtualization-in-a-virtualized-environment)
+    * [Shadow Page Table](#shadow-page-table)
+    * [Efficent Mapping in Paravirtualization](#efficient-mapping-in-a-paravirtualized-space)
+    * [Dynamically increasing memory](#dynamically-increasing-memory)
+    * [Shared Memory](#shared-memory-across-virtual-machines)
+    * [Memory Allocation Policies](#memory-allocation-policies)
+* [CPU Virtualization](#cpu-virtualization)
+* [Device Virtualization](#device-virtualization)
+    * [Control Transfer](#control-transfer)
+    * [Data Transfer](#data-transfer)
+    * [Example - Network Virtualization](#control-and-data-tranfser-in-action-network-virtualization)
+* [Summary](#summary)
+
+
 
 ## Introduction
 
