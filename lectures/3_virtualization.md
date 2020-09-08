@@ -253,3 +253,24 @@ The consumer is Xen. It owns a pointer that references at which point in the rin
 
 One important thing to remember about the Xen Async Ring data structure is that the data structure only holds file descriptors, any data that exists because of a fielded request will actually be in a memory page somewhere in machine memory and the Ring will be updated with a pointer to that page. This memory page will be shared so that no copying has to be done from the hypervisor address space to the guest OS address space.
 
+### Control and Data Transfer in Action - Network Virtualization
+
+Each guest has two I/O rings, one for transmission and one for reception. If the guest wants to transmit packets it enqueues descriptors in into the transmission ring. The packets that need to be transmitted are not copied into Xen, the buffers that contain these packets are inside the guest OS. To enable the hypervisor to reference this data, the guest OS embeds pointers to this data in the transmission ring. In other words, there is no copying between the address spaces. For the duration of the transmission of the packets, the pages are pinned.
+
+Of course more than one guest OS might want to transfer packets, so Xen uses a round-robin packet scheduler to determine who gets to use the network.
+
+Receiving packets and passing them to the appropriate domain works in the reverse. The hypervisor receives the packets and saves them to a per-allocated buffer owned by the guest OS. It then updates the Recv ring with pointers to this buffer so that the guest OS can read this new data. 
+
+<img src="resources/3_virtualization/network_virtualization.png">
+
+### Control and Data Transfer in Action - Disk Virtualization
+
+Disk I/O virtualization works similarly to network virtualization. Every VM has a Disk I/O ring. The communication between the hypervisor and the guest OS strives to avoid copying between the domains.
+
+Xen may reorder requests between competing domains in order to make I/O throughput efficient. Xen also provides a reorder barrier for guest OS's to enforce that operations happen in the order that the guest OS specifies. 
+
+### Summary
+
+It is incredibly important to be able to measure resource usage in a virtualized environment because it allows management and billing. 
+
+The difference between virtualization technology and extensible OS's like we saw in the first series of lectures is that virtualization technology is on **protection** and **flexibilty**, not as much performance. 
