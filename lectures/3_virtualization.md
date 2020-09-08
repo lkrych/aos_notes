@@ -229,3 +229,27 @@ In a paravirtualized setting:
 2. hypervisor->guest: via software interrupts (events)
 
 The additional facility you have in a paravirtualized environment is that the guest has control via hypercalls on when event notifications are delivered. This is not the case in full virtualized environments.
+
+### Data Transfer
+
+There are two aspects to resource management and accountability when it comes to data transfer:
+
+1. **CPU time** - when an interrupt comes in the hypervisor needs to de-multiplex that data that is coming from the device to the correct guest OS. The hypervisor needs to account for the computation time for managing the buffers on behalf of the guest OS above it. Accounting for this time is essential for billing the correct tenant of a virtualized system.
+2. **How is the memory buffer managed**
+
+Let's look at some examples:
+
+Xen provides asynchronous I/O rings, which is basically a data structure that is shared between the guest OS and the hypervisor. Any number of these data structures can be allocated for handling all the device I/O needs of a particular guest OS. 
+
+The I/O ring itself is just a set of descriptors. The idea is that requests from the guest can be placed in the ring by populating the ring descriptors. The I/O ring is specific to a guest.
+
+The Xen hypervisor consumes from the ring and then after fielding the request, places the response back into the ring under the correct descriptor.
+
+<img src="resources/3_virtualization/xen_ring.png">
+
+The guest is thus the producer, it has a pointer that points to the head of the ring. The guest can modify this pointer to point at a new point, the Xen hypervisor can read this pointer.
+
+The consumer is Xen. It owns a pointer that references at which point in the ring it has consumed requests from. This helps it keep track of what it needs to do. The difference between the pointers is how many outstanding requests exist.
+
+One important thing to remember about the Xen Async Ring data structure is that the data structure only holds file descriptors, any data that exists because of a fielded request will actually be in a memory page somewhere in machine memory and the Ring will be updated with a pointer to that page. This memory page will be shared so that no copying has to be done from the hypervisor address space to the guest OS address space.
+
