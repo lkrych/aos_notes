@@ -53,3 +53,31 @@ The memory-consistency model is a **contract between hardware and software as to
 * `c = d = 1` - Process p2 run after both the instructions on p1 have executed. This is also possible.
 * `c = 1, d = 0` - The first instruction of p2 is run, then both instructions in p1, then p2 finishes. This is also possible.
 * `c = 0, d = 1` - While seemingly impossible, this is actually possible. How? Remember that the processes on each CPU are connected via an interconnection network, if the messages are received out-of-order, then this outcome is possible. This is non-intuitive, so memory-consistency models typically disallow this type of behavior.
+
+### Memory Consistency Models
+
+The memory-consistency model is a **contract between hardware and software as to what behavior a programmer should expect when a multi-threaded application is run on the architecture**. 
+
+There are many possible different models, let's talk about one, the **sequential consistency model**.
+
+<img src="resources/4_shared_memory/seq_consistency.png">
+
+One expectation that a programmer has is that the **memory accesses** within an individual process are going to **happen in the order that the program is written**. 
+
+Additionally, there is going to be **arbitrary interleaving** of memory accesses between the two processes.
+
+A good physical analogy of this model is shuffling two halves of a card deck together. There is no guarantee over how the cards get interleaved, but you know they will be in the same order that they started out in when they were split.
+
+Let's go back to our original example from the quiz, under the sequential consistency model the last outcome where the messages along the interconnection are received out-of-order would not be possible. This is comforting. 
+
+### Cache Coherence
+
+**How are memory consistency models implemented efficiently?** This brings us back to **cache coherence**, the implementation of this model in the presence of private caches. 
+
+If the hardware only gives shared address space, but no way of determining whether the caches are consistent, then this system must have the software (the OS) guarantee the contract of the memory consistent model. This is a non-cache coherent shared address space multiprocessor (**ncc shared memory multiprocessor**).
+
+Another option is that the hardware does everything for you, this is a cache coherent multiprocessor (**cc multiprocessor**).
+
+Let's focus on the **hardware implementing cache coherence**. There are two possibilities: **write invalidate or write update**. 
+
+
