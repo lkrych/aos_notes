@@ -1,10 +1,13 @@
 # Shared Memory
 
-![placeholder]()
+![cat eating corn](https://media.giphy.com/media/aQUGAeZ1fBWpy/giphy.gif)
 
 ## Table of Contents
 * [Introduction](#introduction)
-* [Synchronizaton]()
+    * [Shared Memory Caching](#shared-memory-caching)
+    * [Memory Consistency Models](#memory-consistency-models)
+    * [Cache Coherence](#cache-coherence)
+* [Synchronizaton](#synchronization)
 * [Communication]()
 * [Lightweight RPC]()
 * [Scheduling]()
@@ -80,4 +83,88 @@ Another option is that the hardware does everything for you, this is a cache coh
 
 Let's focus on the **hardware implementing cache coherence**. There are two possibilities: **write invalidate or write update**. 
 
+<img src="resources/4_shared_memory/write_invalidate.png">
 
+In **write invalidate**, if a particular memory location is contained in all the caches, and if a processor decides to write to said memory location in the cache, then the **hardware will ensure that all the other references in the other caches are invalidated**. It does this by broadcasting a signal on the system bus. The caches snoop on the system bus to watch out for these kinds of signals.
+
+<img src="resources/4_shared_memory/write_update.png">
+
+In **write update**, if a particular CPU writes to the memory location in its cache, then the **hardware sends an update signal on the bus with the new value for that memory location**. 
+
+One thing that is important to remember is that no matter what scheme is used, there is work to be done by the hardware. Overhead grows with an increasing number of processors. So while is is reasonable to expect that increasing the number of processors will increase the performance of a system in general, it is not in a linear fashion because of these overheads.
+
+<img src="resources/4_shared_memory/scalability.png">
+
+Limit the amount of memory you share across machines in parallel system to have efficient code.
+
+## Synchronization
+
+Synchronization primitives are key for parallel programming. A **lock** is an **entity that allows a thread to make sure it is has exclusive access to shared data**. 
+
+Locks come in two flavors:
+1. **Exclusive Lock** - which means the lock can only be used by one thread at a time.
+2. **Shared Lock** - simultaneous threads can access the data at the same time. This happens a lot with read access for data entries. 
+
+Another kind of synchronization primitive that is very popular in multithreaded parallel programming is a **barrier**. The idea behind this primitive is that there are multiple threads and they are all doing some computation in parallel. At some point, they want to get back together and check up with each other to see what they've been up to. This means that threads need to wait at the barrier until the other threads have shown up.
+
+<img src="resources/4_shared_memory/barrier.png">
+
+A physical analogy to this idea is a restaurant that only seats you if all members of your party have arrived.
+
+### Atomic Operations
+
+Let's look at a simple implementation of an exclusive lock. 
+
+<img src="resources/4_shared_memory/simple_lock.png">
+
+**Is it possible to implement this with atomic reads and writes alone?**
+
+Let's look at the lock acquisition code to answer this question.
+
+```c
+if (l == 0) {
+    l = 1;
+}
+```
+There are three instructions that need to be performed here:
+
+1. Read `l` from memory.
+2. Compare `l` to 0. 
+3. Set `l` to 1.
+
+We know that reads and writes are *individually* atomic. But, these three instructions **need to be executed together (atomically)** to ensure that different threads don't interfere with each other's lock acquisition.
+
+Therefore **reads and writes are not sufficient to implement this lock algorithm**.
+
+What is needed is a **read-modify-write atomic instruction**. There are several flavors of these instructions.
+
+1. **Test-and-set** - Takes a memory location as an argument, it returns the current value at that memory location and sets the current value to 1. 
+2. **Fetch-and-inc** - Takes a memory location as an argument, it returns the current value at that memory location and increments the current value by 1. 
+
+**Generically**, these **read-modify-write instructions** are known as **fetch-and-phi instructions** because they fetch a value and modify it in some way. 
+
+### Mutex Lock Algorithms
+
+Let's discuss some scalability issues with synchronization primitives in a shared memory processor. The source of inefficiencies in both barrier and lock algorithms are
+1. **latency** (time spent by a thread to acquire a lock)
+2. **waiting time** (how long do I wait to obtain a busy lock?)
+3. **contention** (when a lock is freed, how long does it take in the presence of contention for a winner to emerge with a lock?). 
+
+### Naive Spinlock
+
+Let's start our discussion with the simplest/naive lock. This lock is called the **spin lock** because the processor has to actively wait on the lock when it needs to acquire it. The lock will be implemented with a test-and-set instruction.
+
+We have a shared memory location, `l`, that can have one of two possible values, locked or unlocked. 
+
+<img src="resources/4_shared_memory/naice_spinlock.png">
+
+To acquire a lock a thread spins on the test-and-set operation. To unlock it, the thread that has the lock sets the value to unlocked. 
+
+**What are the problems with this naive spinlock?**
+* **too much contention** - each thread is spinning on the test-and-set instruction on that shared memory value. 
+* **does not exploit caches** - every CPU in a shared memory architecture has its own cache. It is often the case that these caches are kept coherent by the hardware. Caches are used to make the execution faster. However, there is an **issue with the test-and-set instruction.** Test-and-set cannot use the cached value, because by definition it has to make sure that the memory value it is operating on is modified atomically. It will bypass the cache and go to memory.
+* **disrupts useful work** -  When a processor releases the lock, that processor is prevented from doing work by the contention of the other processors. 
+
+### Caching Spinlock
+
+Let's look at how we can exploit the CPU caches. 
