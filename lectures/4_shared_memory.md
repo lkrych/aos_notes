@@ -210,4 +210,31 @@ The lock has a struct with two fields, `next_ticket` and `now_serving`. A thread
 
 One downside of this algorithm is that the `now_serving` value in the local cache is being incremented which causes cache-coherent mechanisms to flood the system bus.
 
+Ideally, we would want a system where one thread could be signaled instead of all of them. 
 
+### Queueing Locks
+
+<img src="resources/4_shared_memory/array_queue_lock.png">
+
+Let's talk about an array-based queueing lock. Associated with each lock, `l`, is an array of flags. The size of this array is equal to the number of processors in the shared memory processor. The **flags array serves as a circular queue for enqueueing the requestors for a particular lock**. This means that **each lock has a flags array**.
+
+Each element in the flags array can be in one of two states:
+1. **has-lock** - the thread has the lock and can do what it wants to do with it!
+2. **must-wait** - the thread does not have the lock and must wait.
+
+There can be exactly one processor with the **has-lock** state. One thing to notice is that the slots in the array are not statically-associated to any particular processor. There is a spot designated for each processor, but it is not an assigned spot. So how does it work?
+
+Well, there is an integer associated with the flags array called `queuelast`. This references the index in the array that is available for queueing in the array. This index is incremented each time a processor requests a lock.
+
+Because the array size is N (the number of processors), no processor will be denied a place in the queue. 
+
+When a lock request is made, a fetch-and-inc instruction is made on the `queuelast` variable. This ensures that a spot  is set aside. Then the processor waits for its turn, this means it checks the flags array for the `has-lock` state.
+
+A variant on the array-based queueing lock is the **linked-list based queueing lock**. This strategy **avoids the space-complexity of the array**-based queueing lock.
+
+The size of the queue is going to be as big as the dynamic sharing of the lock. The head of the queue is a dummy node that is associated with every lock. There are two fields for every queue node for a requestor:
+
+1. **guarded** - a boolean that says if the requestor has the lock
+2. **next** - points to the successor in the queue. 
+
+To add yourself to the linked-list you need to increment the last-requestor field on the dummy node of the linked list. This ensures that you are referenced by the previous last requested node. Now the requestor can spin on the guarded boolean variable. 
