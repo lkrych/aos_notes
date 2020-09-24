@@ -232,9 +232,29 @@ When a lock request is made, a fetch-and-inc instruction is made on the `queuela
 
 A variant on the array-based queueing lock is the **linked-list based queueing lock**. This strategy **avoids the space-complexity of the array**-based queueing lock.
 
+<img src="resources/4_shared_memory/linked_list_queue.png">
+
 The size of the queue is going to be as big as the dynamic sharing of the lock. The head of the queue is a dummy node that is associated with every lock. There are two fields for every queue node for a requestor:
 
 1. **guarded** - a boolean that says if the requestor has the lock
 2. **next** - points to the successor in the queue. 
 
-To add yourself to the linked-list you need to increment the last-requestor field on the dummy node of the linked list. This ensures that you are referenced by the previous last requested node. Now the requestor can spin on the guarded boolean variable. 
+To add yourself to the linked-list you need to increment the last-requestor field on the dummy node of the linked list. This ensures that you are referenced by the previous last requested node. Now the requestor can spin on the guarded boolean variable.
+
+Let's now talk about the lock algorithm. The lock takes the name of the lock, and the queue node that wants to be enqueued. The first thing to do is join the queue. 
+1. **Join the queue** - The following must be done atomically. Set the last pointer of the head node to the new node. Update the last element in the list to point to the new last node. 
+2. **Await the lock** - spin on the guarded value.
+
+To facilitate the atomic queue-joining actions, we propose that an instruction called **fetch-and-store** is added to the instruction set.
+
+The unlock function removes the current node from the linked list and signals to the successor that it is the current node.
+
+A special case occurs when there is no successor to the current node. When that occurs, we have to set the head node of the linked list to point to NIL to indicate that no successor exists.
+
+Let's talk about one of the classic race conditions of parallel programs. Imagine that a new request is forming for the lock queue, but the current node that is unlocking hasn't fully released itself from the lock queue. The requestor will be trying to build itself into the queue based on the current node's position, and the current node will be trying to extricate itself! This is a classic race condition that happens in all sorts of places in distributed/parallel systems. 
+
+<img src="resources/4_shared_memory/ll_lock.png">
+
+The solution to this problem is to add some more logic into the unlock function. Before the linked list sets the value of NIL on the head node, double check that there are no requests forming. This means **we need an atomic instruction for setting the value to NIL if the head node is pointing to the currently escaping node and not a currently forming request**. The solution is a **conditional store instruction called a compare-and-swap**. This instruction will only store if a condition is satisfied. 
+
+Compare-and-swap will return true if the head pointer is pointing to the node trying to unlock itself. In this case, the compare-and-swap instruction will set the pointer to NIL. On the other hand, if the comparison fails, it won't do the swap, it will return false. If this is the case, then the node that is trying to leave needs to spin until the joining node finishes the lock call. At this point, the next pointer of the leaving node will be not NIL, and it can proceed with the unlock call by signaling to the successor that it now has the lock.
