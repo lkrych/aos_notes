@@ -258,3 +258,13 @@ Let's talk about one of the classic race conditions of parallel programs. Imagin
 The solution to this problem is to add some more logic into the unlock function. Before the linked list sets the value of NIL on the head node, double check that there are no requests forming. This means **we need an atomic instruction for setting the value to NIL if the head node is pointing to the currently escaping node and not a currently forming request**. The solution is a **conditional store instruction called a compare-and-swap**. This instruction will only store if a condition is satisfied. 
 
 Compare-and-swap will return true if the head pointer is pointing to the node trying to unlock itself. In this case, the compare-and-swap instruction will set the pointer to NIL. On the other hand, if the comparison fails, it won't do the swap, it will return false. If this is the case, then the node that is trying to leave needs to spin until the joining node finishes the lock call. At this point, the next pointer of the leaving node will be not NIL, and it can proceed with the unlock call by signaling to the successor that it now has the lock.
+
+So what are the virtues of this linked-list based queueing lock? It is **fair**. And there is **not much contention** when a lock is released. These two points are the same as Anderson's lock. It is also more space-efficient than Anderson's lock. It is dynamic and proportional to the amount of requestors at a current time.
+
+The downside of this implementation is that there is **linked-list maintenance** that is associated with locking and unlocking nodes. Anderson's array-based queue can be faster.
+
+If a processor supports the fancy instructions we indicated as prerequisites to the queueing strategies, than these are good choices for implementing locks. Otherwise, exponential back-off is probably the best bet. 
+
+### Comparing Lock Algorithms
+
+<img src="resources/4_shared_memory/comp_locks.png">
