@@ -156,7 +156,7 @@ Let's start our discussion with the simplest/naive lock. This lock is called the
 
 We have a shared memory location, `l`, that can have one of two possible values, locked or unlocked. 
 
-<img src="resources/4_shared_memory/naice_spinlock.png">
+<img src="resources/4_shared_memory/naive_spinlock.png">
 
 To acquire a lock a thread spins on the test-and-set operation. To unlock it, the thread that has the lock sets the value to unlocked. 
 
@@ -167,4 +167,47 @@ To acquire a lock a thread spins on the test-and-set operation. To unlock it, th
 
 ### Caching Spinlock
 
-Let's look at how we can exploit the CPU caches. 
+Let's look at how we can exploit the CPU caches. The problem with the previous approach is that the **test-and-set instruction HAS to go to memory**. The implementation of the naive spinlock involved spinning on this instruction: when we wanted to acquire the lock, we had to execute this instruction that goes to memory.
+
+<img src="resources/4_shared_memory/caching_spinlock.png">
+
+Well what about if we modify this a bit. What if the threads that have to wait on the lock rely on the cache instead of going to memory every time? This strategy is called **spin-on-read**. The assumption about the architecture here is that it provides cache coherence (and thus that all the caches reflect what is in main memory). 
+
+So, lets have the waiters spin locally on the cached value. Practically this means that instead of having a test-and-set operation be in the tight loop, we just have a normal read instruction be in the loop. So if the value doesn't exist in the cache, it is fetched from memory and placed in the local cache and now the instructions can just spin on this cached value. **The released lock will be detected via the cache coherence mechanisms of the hardware**. 
+
+Let's talk about one of the inefficiencies of this schema.  When a lock is released, all of the processors are going to do a test-and-set at the same time. We know that this instruction bypasses the cache and goes into main memory. This is going to create A LOT of chatter on the system bus. In a write-invalidate cache mechanism, there will be an O(n^2) bus transactions. Because every CPU will invalidate the cache.
+
+### Spinlocks with delay
+
+In order to **limit the amount of contention** on the system bus when a lock is released we are going to use a **delay**.
+
+Each process will delay asking for the lock immediately even though they know that it has been unlocked. You could liken this behavior to pulling your car off the road during rush hour and going for a walk. 
+
+**Static delays** aren't a great strategy because there can be wasted cycles. 
+
+<img src="resources/4_shared_memory/spinlock_delay.png">
+
+Let's talk about two different delay alternatives:
+
+1. **Delay after lock release**  - uses static delays
+2. **Delay with exponential backoff** - uses dynamic delays, in this schema you delay immediately after checking the lock. This delay is some small number at first, but it increases exponentially.
+
+One of the nice thing about the exponential delay algorithm is that we are not using the caching at all. This means the algorithm will work on a non-cache coherent multiprocessor architecture. 
+
+Generally speaking, if there is a lot of contention, then static delay will be a better strategy than exponential backoff.
+
+### Ticket Lock
+
+Up until now we've discussed strategies for reducing latency in acquiring a lock, and the contention when the lock is released.
+
+We haven't talked about **fairness**, **giving the lock out to the threads that asked for it first**. Not the line cutters. This is impossible in the spinlock strategy.
+
+The basic idea of the ticket lock algorithm implements a system whereby a ticket the demarcates a threads place in the queue of other threads that want the lock. How does this work?
+
+<img src="resources/4_shared_memory/ticket_lock.png">
+
+The lock has a struct with two fields, `next_ticket` and `now_serving`. A thread that wants to acquire the lock issues a fetch-and-inc instruction on the lock's `next_ticket` field. It then loops on pausing and then checking the lock's `now_serving` field. When a thread releases the lock, the thread increments the `now_serving` field.
+
+One downside of this algorithm is that the `now_serving` value in the local cache is being incremented which causes cache-coherent mechanisms to flood the system bus.
+
+
