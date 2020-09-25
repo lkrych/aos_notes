@@ -493,3 +493,23 @@ If we are implementing RPC on a shared memory multiprocessor, we can avoid some 
 
 ## Scheduling
 
+The mantra for scheduling is to keep the cache warm if you want to have good performance.
+
+The algorithm that you use for scheduling depends on the situation that you are in. 
+
+Keeping the memory hierarchy in mind is a great tactic when thinking about how to optimize scheduling. There can be a many-orders-of-magnitude difference between how long it takes to run a thread that is present in the L1 cache and one that is in main memory.
+
+### Cache Affinity Scheduling
+
+The idea behind **cache-affinity scheduling** is that **threads should be scheduled to run on the processors that they were originally run on**. Why? The caches of these processors are probably much hotter than one who hasn't seen this thread before. 
+
+<img src="resources/4_shared_memory/cache_affinity.png">
+
+What can go wrong with this strategy? Intervening threads can pollute the cache on the processor. 
+
+Let's look at different scheduling policies that an operating system may choose to use. 
+
+1. **FCFS** - Pick the earliest scheduled thread. **Ignores affinity for fairness**. 
+2. **Fixed Processor** - A thread is always scheduled to the same processor. This might be decided by a load balancer. 
+3. **Last Processor** - The processor is going to pick a thread that used to run on it. It gives preference to the threads that might have a hotter cache. If such a thread is unavailable, pick someone else.
+4. **Minimum Intervening Policy** - Save the affinity for every thread for each processor. Pick the processor that has the highest affinity.
