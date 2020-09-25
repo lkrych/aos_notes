@@ -372,6 +372,48 @@ It is convenient to think about these communications as messages because in a sh
 
 One of the virtues of this algorithm is that there is **no hierrarchy**! It also works in NCC machines and clusters (non shared memory machines).
 
+The communication overhead in this algorithm is O(nlogn)
+
+### Comparing Synchronization Algorithms
+
+Which **algorithm to choose depends on the architecture** that you are running on.
+
+## Communication
+
+The next topic we will be discussing is efficient communication across address spaces. The **client-server paradigm** is used in structuring system services in a distributed system. If you are using a file system in a local area network, you are using a client-server system.
+
+<img src="resources/4_shared_memory/rpc1.png">
+
+**Remote procedure calls** are the mechanisms that are used to build the client-server system. What happens when the client and server are on the same machine? Does it still make sense to use RPC? The main concern is performance.
+
+As OS designers, **we would be able to make RPC calls across protection domains as efficient as possible**. 
+
+### RPC
+
+Let's compare RPC to a procedure call. In a procedure, all the functions are compiled and linked together to make an executable. When a caller makes a call to the callee, it passes the arguments to the stack, and the callee can read these variables, do some work and then return the result back to the callee through the stack. The important thing to not is that all of this is compiled beforehand. 
 
 
+<img src="resources/4_shared_memory/rpcvsprocedure.png">
 
+In RPC, the principle is th same, but under the cover some more things are happening.
+
+1. When a client makes a call, it is actually trapping down into the kernel.
+2. The kernel validates the call and copies the arguments of the call into kernel buffers from the client address space.
+3. The kernel locates the server procedure and then copies the arguments it has buffered into the address space of the server. 
+4. It schedules the server to run the procedure
+5. At this point the server executes the function.
+6. When the server is done, it traps into the kernel.
+7. The kernel validates the call and copies the return value into kernel buffers from the server address space.
+8. The kernel locates the client procedure and then copies the return value it buffered into the address space of the client.
+
+The important thing to note here is that **all of this happens at runtime**. This is a large source of the overhead of RPC.
+
+There are **two traps**, the call trap and the reverse trap, and there are **two context switches**, from client to server and server back to client. 
+
+The **sources of overhead** are: **kernel validation in the client trap, copying data between address spaces, and context switch overhead**. 
+
+So how many times does the kernel copy stuff from user address spaces into kernel buffers and vice-versa? FOUR TIMES 😱.
+
+### Copying in RPC
+
+If there is a place we want to avoid overhead, it is in this copying of data multiple times. 
