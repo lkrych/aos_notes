@@ -268,3 +268,66 @@ If a processor supports the fancy instructions we indicated as prerequisites to 
 ### Comparing Lock Algorithms
 
 <img src="resources/4_shared_memory/comp_locks.png">
+
+## Barrier Synchronization
+
+In barrier synchronization, a "barrier" is erected along threads of execution. At this barrier, all the threads meet up and exchange information about the work they've done. Barrier synchronization is very popular in scientific applications.
+
+### Count Barrier
+
+<img src="resources/4_shared_memory/count_barrier.png">
+
+The first barrier we are going to discuss is the **centralized/counting barrier**. The idea is simple, we have a counter that is initialized to N, the number of threads that need to synchronize. 
+
+When a thread arrive at the barrier, it atomically decrements the counter. If the count is not zero, the thread is going to spin.
+
+One big problem with this algorithm is that as soon as the counter reaches zero, all the other threads start off running. This leaves the straggler to increment the count back up to N while the others are racing ahead. Not ideal.
+
+<img src="resources/4_shared_memory/count_barrier2.png">
+
+The solution to this problem is adding a second spin loop that asserts that the threads shouldn't leave the barrier until the count has been reset to N. 
+
+### Sense Reversing Barrier
+
+The count barrier needs two spin loops for every barrier. We would like to see if we can reduce that number.
+
+In the **sense reversing barrier** we remove one of the spin loops by not having the threads waiting for the count to become 0. In addition to the count, we keep a new variable called `sense`. 
+
+<img src="resources/4_shared_memory/sense_barrier.png">
+
+This variable indicates whether all the threads have not reached the barrier. So when the algorithm starts, it is false, and after they all cross the barrier, it is true. 
+
+So **when a thread arrives at a barrier, it decrements the count and spins on sense reversal (changes value)**. 
+
+The last thread will reset the count to N and reverse the sense value. 
+
+<img src="resources/4_shared_memory/sense_barrier2.png">
+
+The problem with this solution is that we have a shared variable for all the processors. If we have a shared memory multiprocessor with tons of processors (let's imagine we are doing some sort of massively parallel scientific computation) then there is going to be **a lot of contention on the interconnection network** because the variable is a hotspot.
+
+### Tree Barrier
+
+<img src="resources/4_shared_memory/tree_barrier.png">
+
+First we are going to discuss a **more scalable solution to the sense reversal algorithm**. The basic idea is to use divide-and-conquer. **Limit the amount of sharing to a small number of processors**. Break them up into small groups and into a hierarchy. This leads to a **tree data structure**. 
+
+At each level `count` and `locksense` variables will be managed. The sense-reversing algorithm will be run in many different rounds and slowly filter its way up the tree. 
+
+
+There are many more shared variables in this solution, but the shared variables are only shared with a small subset of the processors. At each barrier, **only one of the pair (the last one) that finished continues because only one of them needs to go ahead to signify that both finished**. This is what makes the algorithm more efficient from a contention standpoint.
+
+Once the root sense-reversal barrier is breached, all the CPUs can wake up and proceed with their computation.
+
+<img src="resources/4_shared_memory/tree_barrier2.png">
+
+### MCS Tree Barrier (4-ary)
+
+In the MCS variant of the tree barrier, each node has the potential to have four children. Each node represent a processor, and each node maintains a set of data structures to manage the barrier synchronization: the **Have Children Array** and the **Child Not Ready Array**.
+
+<img src="resources/4_shared_memory/mcs_tree.png">
+
+To indicate that they've reached the barrier, each processor updates its statically determined index in its parents Child Not ready Array. Once each child has marked that they are good to go, the parent is ready and proceeds to mark its index in its parents Child Not Ready array (these are indicated by the red arrows in the diagram). 
+
+The reason why they chose the 4-ary tree is that there is a theoretical/mathematical result that proves that this is an optimal setup for performance. In a cache-coherent multiprocessor, it is possible to arrange this data structure so that the Child Not Ready array can be packed into one word of a processor. This means that a parent only has to spin on one memory location. The cache coherent mechanism will modify the parents immediately. Neat!
+
+
