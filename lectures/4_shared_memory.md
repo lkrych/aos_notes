@@ -417,3 +417,23 @@ So how many times does the kernel copy stuff from user address spaces into kerne
 ### Copying in RPC
 
 If there is a place we want to avoid overhead, it is in this copying of data multiple times. 
+
+Let's analyze all the possible places for potential efficiency gains.
+
+The kernel doesn't understand any of the syntax of how an RPC call works, and yet it has to be the intermediary of the message passing. So how does the RPC call work granularly?
+
+<img src="resources/4_shared_memory/copying_overhead.png">
+
+When a client makes a call there is an entity called a client stub that intercepts the request from the client (who thinks it is making a normal procedure call), and the stub takes the arguments from the client stack and makes an RPC packet out of it. This is a serialization process that takes the arguments from the client and packs them into a pre-defined byte sequence.
+
+This is the first copy that happens in the RPC system. This happens even before the kernel is involved.
+
+The next thing that happens is that the client stub traps into the kernel and copies the serialized message from the address space of the client to the kernel buffers.
+
+Next the kernel schedules the server in the server domain, once this has been scheduled it then copies the buffer into the server domain.
+
+The server stub intercepts this message and then deserializes the arguments so that they can be fed to the server stack. 
+
+We can see here that just going from the client to the server there are 4 copies. Two at the user-level and two at the kernel-level.
+
+Once the server finishes executing it makes a call to the server stub which does the same serialization process as the client stub but with the return value. 
