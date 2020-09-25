@@ -322,12 +322,56 @@ Once the root sense-reversal barrier is breached, all the CPUs can wake up and p
 
 ### MCS Tree Barrier (4-ary)
 
-In the MCS variant of the tree barrier, each node has the potential to have four children. Each node represent a processor, and each node maintains a set of data structures to manage the barrier synchronization: the **Have Children Array** and the **Child Not Ready Array**.
+In the MCS variant of the tree barrier, there are different trees used for each stage of the barrier, arrival and release. In the **arrival variant** each node has the potential to have four children. Each node represent a processor, and each node maintains a set of data structures to manage the barrier synchronization: the **Have Children Array** and the **Child Not Ready Array**.
 
 <img src="resources/4_shared_memory/mcs_tree.png">
 
 To indicate that they've reached the barrier, each processor updates its statically determined index in its parents Child Not ready Array. Once each child has marked that they are good to go, the parent is ready and proceeds to mark its index in its parents Child Not Ready array (these are indicated by the red arrows in the diagram). 
 
 The reason why they chose the 4-ary tree is that there is a theoretical/mathematical result that proves that this is an optimal setup for performance. In a cache-coherent multiprocessor, it is possible to arrange this data structure so that the Child Not Ready array can be packed into one word of a processor. This means that a parent only has to spin on one memory location. The cache coherent mechanism will modify the parents immediately. Neat!
+
+<img src="resources/4_shared_memory/mcs_tree2.png">
+
+In the **release (wake-up) section of the MCS tree**, the data structure is split into a binary tree. To signal that a processor is free to go, the root tree begins a recursive freeing task where it looks down at its children and says, you are free to go. Each one of these children also needs to free its children. These child pointers are statically-determined.
+
+### Tournament Barrier
+
+<img src="resources/4_shared_memory/tournament.png">
+
+The **tournament barrier** is organized as a tournament with N players, this means that there will be **log2(N) rounds**.
+
+We are going to **rig this tournament and choose who is going to win from each round**. The rationale for this is that if these processors are executing in a shared memory multiprocessor, and the winner is waiting for the loser to "finish" (reach the barrier), then the **location that that winner is spinning on is static/fixed**. The spin location will be pre-determined, this is very very useful, especially if you have a non-cache coherent multiprocessor. 
+
+Once the champion (who we've predetermined) has been signaled, we know that all threads have arrived at the barrier! To wake up all the rest of the processors, the champion walks over to the processor that signaled to it and indicates that it should wake up. This happens recursively back down the tree. 
+
+There is a lot of similarity between the tournament algorithm and the sense-reversal tree algorithm and the MCS wake-up algorithm. The **main difference** is that in the tournament barrier, the **spin locations are statically-determined**, while in the tree-barrier they are dynamically-determined based on who arrives at a particular node first. 
+
+Another important difference is that **there is no need for a fetch-and-phi operation in the tournament barrier**. As long as we have an atomic read/write instructions, that's all we need for a tournament barrier. Whereas, the tree barrier needs a fetch-and-phi to atomically decrement the counter variable at each node in the tree algorithm.
+
+The total amount of communication needed is similar between the two: O(logN). All of the communication, because it is split up, could possibly be done in parallel. The tournament barrier also works if the machine isn't a shared memory multiprocessor, because basically all we are doing is **message-passing**. 
+
+Let's make a comparison of tournament to MCS. The tournament is only going to be able to represent a tournament between two processors. This means that it **cannot exploit the spatial locality** that exists in the caches (multiple spin variables exist in the same cache line). 
+
+### Dissemination Barrier
+
+<img src="resources/4_shared_memory/dissemination.png">
+
+Works by **information diffusion in an ordered manner (orchestrated gossip) between the participating processors**. It is not pair-wise communication as we saw in the tree barrier/tournament barrier models.
+
+One of the nice things about this particular barrier is that **the N (number of processors) doesn't need to be a power of 2**. 
+
+In each round, a processor sends a message to **another processor who is chosen as a function of which round it is in**. All of these communications are in parallel, they **send a message as soon as they reach a barrier**. How do the nodes know when a round is finished? **As soon as each node has sent a message and received one it can proceed**. This means that the processors each move independently through the rounds.
+
+So how many communication events happen per round? O(N) events. 
+
+<img src="resources/4_shared_memory/dissemination2.png">
+
+So how many rounds in total for the dissemination barrier to complete? It is **Ceil(Log2N)**, this means that every processor has received a message from every other node in the system. The reason it is a ceiling function is because of the fact that N need not be a power of two.
+
+It is convenient to think about these communications as messages because in a shared memory machine, a message is basically a spin location. Because we know an ordained processor is going to talk to each node, the spin location is statically-determined. At every round we can statically-determine this spin location and this is very helpful if the machine is non-cache coherent. 
+
+One of the virtues of this algorithm is that there is **no hierrarchy**! It also works in NCC machines and clusters (non shared memory machines).
+
+
 
 
