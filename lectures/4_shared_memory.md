@@ -437,3 +437,59 @@ The server stub intercepts this message and then deserializes the arguments so t
 We can see here that just going from the client to the server there are 4 copies. Two at the user-level and two at the kernel-level.
 
 Once the server finishes executing it makes a call to the server stub which does the same serialization process as the client stub but with the return value. 
+
+### Reducing overhead in RPC
+
+Focus on the recurring costs, not the one-time costs. In RPC, these are the actual calls between the client and the server. 
+
+**Setup Cost**
+
+The set up cost isn't very important because it only happens once. 
+
+<img src="resources/4_shared_memory/rpc.png">
+
+To set up a connection between a client and a server, the client needs to issue a request for a  specific procedure from the server. This request gets routed (trap) through the kernel to the name server which is a directory of all the services available. 
+
+The kernel needs to validate that the client can indeed make a call to this server, and it does this by checking with the server to see if it accepts requests rom the client.  
+
+Once this validation has been done, the kernel sets up a **descriptor** (data structure) called a procedure descriptor that is in the kernel. This descriptor tells the kernel about certain aspects of the RPC. The starting address of the procedure (entry point), the size of the arguments, and the number of calls the server is willing to expect.
+
+The kernel establishes **a buffer of shared memory** and maps it into the address space of the client and the server. What we have now is a method of communication directly between the client and the server without mediation with the kernel. 
+
+So now the kernel is done with setting up the RPC mechanism between the client and the server. All the kernel does now is authenticate the client, it does this by giving the client a token called the **binding object**. Everytime the client wants to make a call to the server, it needs to present this token.
+
+This kernel mediation happens only once. Now that we have done all this set up, there actually isn't much overhead between the calls.
+
+**Making RPC calls**
+
+What the client stub does now is to take the arguments from the calling procedure and feed them into the A-stack, the shared memory established by the kernel. 
+
+<img src="resources/4_shared_memory/rpc2.png">
+
+Data can only be passed by value into this shared memory. Why? because pointers in the address space of the client won't make any sense in the server.
+
+Then the client traps into the kernel with the binding object, the binding object indicates what procedure descriptor to use, the kernel can then use the procedure descriptor to pass control to the server to start executing.
+
+Next, the server's server stub deserializes the arguments from the A-stack and feeds them to the server procedure.
+
+The procedure is executed, the result is serialized and passed to the A-stack. The server then traps back to the kernel who can inform the client that the procedure has finished. 
+
+<img src="resources/4_shared_memory/rpc3.png">
+
+### Analysis of Improved RPC
+
+There are now only two copies that are being done because of the shared memory establishment during the binding process. These copies are done in user space.
+
+<img src="resources/4_shared_memory/rpc4.png">
+
+To summarize, during the actual calls, copies through the kernel are eliminated. The **actual overhead that are incurred in making these calls are the client trap/kernel validation and the switching of domains/address spaces** between the client and the server. The implicit overhead comes from the loss of locality during the domain switching.
+
+
+### RPC on SMP
+
+If we are implementing RPC on a shared memory multiprocessor, we can avoid some of the locality issues that we talked about. How? Just **pin the server domains to one of the CPUs**. This helps keep caches warm. 
+
+<img src="resources/4_shared_memory/rpc_smp.png">
+
+## Scheduling
+
