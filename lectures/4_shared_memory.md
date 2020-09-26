@@ -8,9 +8,34 @@
     * [Memory Consistency Models](#memory-consistency-models)
     * [Cache Coherence](#cache-coherence)
 * [Synchronizaton](#synchronization)
-* [Communication]()
-* [Lightweight RPC]()
-* [Scheduling]()
+    * [Atomic Operations](#atomic-operations)
+    * [Mutex Lock Algorithms](#mutex-lock-algorithms)
+        * [Naive Spinlock](#naive-spinlock)
+        * [Caching Spinlock](#caching-spinlock)
+        * [Spinlock w/ Delay](#spinlocks-with-delay)
+        * [Ticket Lock](#ticket-lock)
+        * [Queueing Lock](#queueing-locks)
+        * [Comparing Lock Algorithms](#comparing-lock-algorithms)
+    * [Barrier Synchronization](#barrier-synchronization)
+        * [Count Barrier](#count-barrier)
+        * [Sense Reversing Barrier](#sense-reversing-barrier)
+        * [Tree Barrier](#tree-barrier)
+        * [MCS Tree Barrier](#mcs-tree-barrier-4-ary)
+        * [Tournament Barrier](#tournament-barrier)
+        * [Dissemination Barrier](#dissemination-barrier)
+* [Communication](#communication)
+    * [RPC](#rpc)
+    * [Copying in RPC](#copying-in-rpc)
+    * [Reducing overhead in RPC](#reducing-overhead-in-RPC)
+    * [Analysis of Improved RPC](#analysis-of-improved-RPC)
+    * [RPC on SMP](#rpc-on-smp)
+* [Scheduling](#scheduling)
+    * [Cache Affinity Scheduling](#cache-affinity-scheduling)
+    * [Scheduling Implementation](#scheduling-implementation)
+    * [Performance in Scheduling](#performance-in-scheduling)
+    * [Cache Affinity in Multicore Processors](#cache-affinity-in-multicore-processors)
+    * [Cache Aware Scheduling](#cache-aware-scheduling)
+
 * [Shared Memory Multiprocessor OS]()
 * [Barrier Synchronization]()
 
@@ -526,7 +551,6 @@ Now that we've looked at policies, let's look at some of the implementation issu
 
 <img src="resources/4_shared_memory/scheduling_imp.png">
 
-
 One strategy is to have the operating system maintain a global queue of all the possible threads that are runnable. Processors then will pick the next available thread. Unfortunately, this is unfeasible when the size of the multi-processor is very big. 
 
 Typically, what is done is to **maintain local queues based on affinity with each processor**. The organization of these queues is determined by the policy.
@@ -553,7 +577,7 @@ What this suggests is that cache affinity is really important. On the other hand
 
 One interesting strategy for improving cache hits is **procrastination**. In this strategy, a processor that is looking for a thread to schedule will notice that none of the ready threads have been run on it before. If this is the case, it will **run an idle loop** and check back after the idle loop. If a thread is scheduled that has affinity for it, it will pick it up. Otherwise, it will pick up one of the threads that it doesn't have much affinity for.
 
-### Cache Affinity in Multi-core Processors
+### Cache Affinity in Multicore Processors
 
 In modern multicore processors, there are multiple cores on a single processor. In addition to these multiple cores, the processes themselves are also **hardware-multithreaded** (also called hyperthreading). This means that if a thread on a current processor is experiencing a long latency operation, in that case the hardware may switch to execute one of the other threads (just concurrency). 
 
