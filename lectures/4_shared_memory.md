@@ -513,3 +513,60 @@ Let's look at different scheduling policies that an operating system may choose 
 2. **Fixed Processor** - A thread is always scheduled to the same processor. This might be decided by a load balancer. 
 3. **Last Processor** - The processor is going to pick a thread that used to run on it. It gives preference to the threads that might have a hotter cache. If such a thread is unavailable, pick someone else.
 4. **Minimum Intervening Policy** - Save the affinity for every thread for each processor. Pick the processor that has the highest affinity.
+5. **Limited Minimum Intervening** - If I have a thousand processors, than the metadata per processor might grow to be too big. Therefore, we should only keep data for that last couple of processors in the metadata.
+6. **Minimum Intervening Plus Queue** - Don't just make a decision based upon the affinity index of the processor, but we should also look at the queue for this processor because the scheduling queue might already be full. By the time that the process is scheduled, the cache might already be invalidated which kind of ruins the scheduling algorithm in the first place. Thus the processor that should be picked **minimizes the affinity index AND the number of processes in the queue**. 
+
+Fixed processor and last processor scheduling focus on cache affinity of the thread (thread-centric), and the minimum policy focus on cache pollution when the thread needs to be run (processor-centric).
+
+<img src="resources/4_shared_memory/min_intervening.png">
+
+### Scheduling Implementation
+
+Now that we've looked at policies, let's look at some of the implementation issues of doing them. 
+
+<img src="resources/4_shared_memory/scheduling_imp.png">
+
+
+One strategy is to have the operating system maintain a global queue of all the possible threads that are runnable. Processors then will pick the next available thread. Unfortunately, this is unfeasible when the size of the multi-processor is very big. 
+
+Typically, what is done is to **maintain local queues based on affinity with each processor**. The organization of these queues is determined by the policy.
+
+In addition to policy-specific attributes, the OS might use additional information to organize the queues. For example, a priority of a thread could be determined by the affinity of the thread to a processor, a priority that was assigned to the thread at initialization and the age of the thread.
+
+### Performance in Scheduling
+
+We will analyze our scheduling perfomance with three metrics, **throughput, response time and variance**. 
+
+**Throughput** is a system-centric metric that means **how many threads get completed per unit time**. 
+
+**Response time** and variance are user-centric measurements. Response time asks **if a thread is started, how long does it take to finish**? 
+
+**Variance** asks **if the time it takes to run a particular thread varies**. 
+
+One important relationship to keep in mind when thinking about exploiting cache availability is the **relationship between the memory footprint of the process and the time it takes to reload the cache**.
+
+The bigger the memory footprint of a particular thread, the more time it is going to take for the processor to load the working set of a particular thread into the cache so that the process can do its work.
+
+<img src="resources/4_shared_memory/cache_mem.png">
+
+What this suggests is that cache affinity is really important. On the other hand, if there is a **heavy load** on a system, it is likely that the cache will be polluted, and thus **a fixed processor scheduling policy might be the best** way to improve cache hits.
+
+One interesting strategy for improving cache hits is **procrastination**. In this strategy, a processor that is looking for a thread to schedule will notice that none of the ready threads have been run on it before. If this is the case, it will **run an idle loop** and check back after the idle loop. If a thread is scheduled that has affinity for it, it will pick it up. Otherwise, it will pick up one of the threads that it doesn't have much affinity for.
+
+### Cache Affinity in Multi-core Processors
+
+In modern multicore processors, there are multiple cores on a single processor. In addition to these multiple cores, the processes themselves are also **hardware-multithreaded** (also called hyperthreading). This means that if a thread on a current processor is experiencing a long latency operation, in that case the hardware may switch to execute one of the other threads (just concurrency). 
+
+<img src="resources/4_shared_memory/multi_core.png">
+
+The difference however between hardware-multithreading and basic concurrency is that the thread isn't removed from the core, it can hang around in the CPU while it is waiting for the async action, and then immediately be switched to when the interrupt comes in. This is implemented by **providing extra storage (more caching) in the CPU**. 
+
+Therefore the goal of a good scheduler in this type of system is to make sure that all the contents of a scheduled thread can be found as close to the CPU as possible.
+
+### Cache Aware Scheduling
+
+Let's assume we have a pool of ready threads (say 32). Let's assume we have a 4-way multi-core CPU. That means we have 4 CPU cores and each core is 4-way multi-threaded.
+
+At any point in the time, the OS can choose 16 threads to be scheduled on the processors. The OS should try schedule a mixture of cache-hungry and cache-frugal threads across the cores. Ideally, the summation of all the cache-hungriness in the pooled threads would be less than the size of the caches present on the hardware. 
+
+Therefore **scheduling involves characterizing a thread along a spectrum of cache-frugality to cache-hungry**. So how do we do this? We **profile the execution of the thread overtime**. 
