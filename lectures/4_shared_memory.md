@@ -35,8 +35,19 @@
     * [Performance in Scheduling](#performance-in-scheduling)
     * [Cache Affinity in Multicore Processors](#cache-affinity-in-multicore-processors)
     * [Cache Aware Scheduling](#cache-aware-scheduling)
-* [Shared Memory Multiprocessor OS]()
-* [Barrier Synchronization]()
+* [Shared Memory Multiprocessor OS](#shared-memory-multiprocessor-os)
+    * [Principles](#principles)
+    * [Refresher on Page Faults](#refresher-on-page-faults)
+    * [Scalable Structure](#recipe-for-a-scalable-structure-in-parallel-oses)
+    * [Case Study - Tornado](#case-study-tornado)
+    * [Traditional OS Structure](#traditional-os-structure)
+    * [Objectization of Memory Management](#objectization-of-memory-management)
+    * [Advantages of a clustered object](#advantages-of-a-clustered-object)
+    * [Non-hierarchical locking](#non-hierarchical-locking)
+    * [Dynamic Memory Allocation](#dynamic-memory-allocation)
+    * [IPC](#ipc)
+    * [Summary](#tornado-summary)
+
 
 ## Introduction
 
@@ -655,7 +666,7 @@ In general, in a SMP system, we have parallel hardware, thus the functional part
 
 This means that where possible, **we need to replicate/partition system data structures**. Have less locking and more concurrency.
 
-### Case study: Tornado
+### Case study - Tornado
 
 <img src="resources/4_shared_memory/tornado1.png">
 
