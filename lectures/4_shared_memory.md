@@ -642,3 +642,27 @@ The **hard scenario for a multi-process OS is a multi-threaded workload**. A pro
 * The address space is shared
 * The page table is shared
 * Shared entries in processor TLBs
+
+The thing we want to keep in mind here is our principles from earlier. We want our OS to limit the shared data structures between the nodes. This will help us ensure scalability in the system.
+
+### Recipe for a scalable structure in parallel OSes
+
+For every subsystem, we need to determine functionally what needs to be done for the service.
+
+In general, in a SMP system, we have parallel hardware, thus the functional part of our services can be executed in parallel. This is the easy part! But in order to ensure concurrent execution, we need to minimize the shared data structures. 
+
+**Less sharing is more scalable**. The problem is that it is easy to say this, but it is hard to practice. 
+
+This means that where possible, **we need to replicate/partition system data structures**. Have less locking and more concurrency.
+
+### Case study: Tornado
+
+<img src="resources/4_shared_memory/tornado1.png">
+
+The key contribution of the Tornado system is the idea of a **clustered object**. The idea is that from the POV of the nodes in the OS, there is a single reference to an object, but under the covers, that object has multiple representations. 
+
+The suggestion of the tornado system is that consistency is managed through a protected procedure call, not by hardware coherency systems. This means that **the designer of the service has to orchestrate the sharing of the data structures**.
+
+Why does this help?
+
+The reason is that hardware cache coherence can be indiscriminate about how it updates. 
