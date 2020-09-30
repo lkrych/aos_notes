@@ -35,7 +35,6 @@
     * [Performance in Scheduling](#performance-in-scheduling)
     * [Cache Affinity in Multicore Processors](#cache-affinity-in-multicore-processors)
     * [Cache Aware Scheduling](#cache-aware-scheduling)
-
 * [Shared Memory Multiprocessor OS]()
 * [Barrier Synchronization]()
 
@@ -594,3 +593,52 @@ Let's assume we have a pool of ready threads (say 32). Let's assume we have a 4-
 At any point in the time, the OS can choose 16 threads to be scheduled on the processors. The OS should try schedule a mixture of cache-hungry and cache-frugal threads across the cores. Ideally, the summation of all the cache-hungriness in the pooled threads would be less than the size of the caches present on the hardware. 
 
 Therefore **scheduling involves characterizing a thread along a spectrum of cache-frugality to cache-hungry**. So how do we do this? We **profile the execution of the thread overtime**. 
+
+## Shared Memory Multiprocessor OS
+
+<img src="resources/4_shared_memory/os_parallel.png">
+
+Modern parallel machines offer a lot of challenges for converting techniques into scalable implementations. Some challenges include:
+1. **Size bloat** - managing more systems means that more system software needs to exist.
+2. **Memory latency** - going outside a chip to memory is huge.
+3. **NUMA** (non-uniform memory access) effects - Individual nodes that contain processor and memory can either access memory local to it or out into the network.
+4. **Deep Memory Heirarchy**
+5. **False Sharing** - even though programmatically there is no connection between memory shared between cores, the cache heirarchy might associate the memory on the same cache line and cache coherence mechanisms might effect seeming unconnected memories. 
+
+### Principles
+
+Some general principles of desigining parallel OS's are:
+
+1. **Cache-conscious decisions** - pay attention to locality and exploit cache affinity in scheduling decisions.
+2. **Limit shared system data structures** - reducing sharing reduces contention. 
+3. **Keep memory access local** - reduce the distance between the accessing processor and the memory.
+
+### Refresher on Page Faults
+
+<img src="resources/4_shared_memory/page_fault.png">
+
+When a thread is executing on the CPU it generates a VPN (virtual page number), the hardware takes this VPN and looks it up in the TLB, to see if it can translate it to to a physical page frame.
+
+If the lookup fails, the hardware consults the page table. It checks the page table for the mapping between the virtual page number and a physical frame. If the hardware had accessed this data before, it will exist in the page table. Otherwise, it needs to go fetch the data from disk. 
+
+If the **mapping doesn't exist in the page table, we have a page fault**. The OS page fault handler then has to locate where on the disk the page exists. As part of the page file service, the OS allocates a physical page frame and do the I/O to move the memory onto the disk into the page frame.
+
+Once the I/O is complete, the OS can update the page table with the mapping between the VPN and the physical page frame. 
+
+Lastly, a TLB update is executed. Finally, after this is complete, the page fault service is complete. 
+
+Let's now **analyze the page fault process for potential bottlenecks**. 
+
+Lookup, both in the TLB and the PT can be parallelized because it is thread-specific. The TLB update is processor-specific, so this can be parallelized as well. The actual disk fetch of the page can be the big bottleneck in this system. We should try to avoid serialization in this process.
+
+The **easy scenario for a multi-process OS is a multi-process workload** wherein threads are executing in all the nodes of the multiprocessor, but the **threads are completely independent** of one another. Page faults can be handled independently. 
+
+* This is because the threads are independent
+* The page tables are distinct
+* We don't have to serialize access to that place in memory
+
+The **hard scenario for a multi-process OS is a multi-threaded workload**. A process with multiple threads that has the potential for exploiting the concurrency of the multiprocessor by scheduling the threads on the nodes of the multiprocessor. In that case, we have a multi-threaded workload on different cores, and we use hardware concurrency to keep things in sync.
+
+* The address space is shared
+* The page table is shared
+* Shared entries in processor TLBs
