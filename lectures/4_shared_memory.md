@@ -733,4 +733,55 @@ If an object reference isn't in the translation table yet, there is a miss and t
 
 The miss handling table is itself partitioned. It is not replicated. All of these are things that are being done to implement a clustered object. If there is a miss on the miss handling table, the global miss handler is activated and cleans things up.
 
-### Non-Heirarchical Locking
+### Non-Hierarchical Locking
+
+The whole idea of objectization of the memory management subsystem was to increase the concurrency for the system services that are executing on the processors.
+
+<img src="resources/4_shared_memory/hierarchical_locking.png">
+
+In the memory management system the main service we are offering is the page fault service. Let's look at an example: We have two threads that have been mapped to the same processor, which means they share a process object. If t1 incurs a page fault, the work will be outsourced to a region.
+
+So how do we actually modify one of these objects? One of the solutions is to use hierarchical locking to lock the process, the region the FCM, the COR, but of course the problem with this is that it will kill concurrency.
+
+This is a bad idea. Maybe we don't need the integrity of the process object? The whole reason we care about the integrity of the object is that we don't want to be doing some work modifying the memory and then suddenly have the object be scheduled for a different processor. This would be unsafe. Thus, maybe what we care about more is an **existence guarantee**. 
+
+We can **use a reference count to guarantee the existence of the object** instead of using hierarchical locking. If the reference count is positive, that means it is in use, don't get rid of it.
+
+Of course, this is only to allow for parallel updating of different region objects. In the case where two threads want to update the same region, you will need to ensure locking on the region. The locking is encapsulated in the object.
+
+Remember, the integrity of the replication needs to be guaranteed by the OS through a protected procedure call mechanism that keeps the regions consistent.
+
+### Dynamic Memory Allocation
+
+<img src="resources/4_shared_memory/dmm.png">
+
+It's important to make sure that **memory allocation scales** with the size of the system. One strategy for doing this is to **divide the heap space of a process** and break it up. 
+
+### IPC
+
+Similar to microkernel-based OS design, functionalities in the Tornado OS are contained in these clustered objects. These objects need to communicate with each other in order to function. Thus, **we need efficient IPC between objects**.
+
+The IPC is realized through PPC, if objects are on the same computer, then Tornado uses hand-off scheduling which doesn't use a context switch(Similar to RPC).  However, if the other service is on a full processor, then there is a full context switch. One last thing is that all **replica management is done via software**.
+
+### Tornado Summary
+
+Object-oriented design which promotes scalability with clustered objects and a protected procedure call by preserving locality while ensuring concurrency.
+
+Reference counting can be used in the implementation in objects to remove the need for hierarchical locking. Locking is also self-contained so that we can have concurrent access.
+
+There is limited sharing of data objects in this system, and this is the real key to the scalability of the system.
+
+
+### Summary of Corey System
+
+The main idea in structuring OS for SMP is to limit sharing kernel data structures because it limits concurrency and increases contention. 
+
+In Corey, the kernel has some insight into what address ranges threads are operating on, this allows it to schedule them to an appropriate processor (the same).
+
+**Shares** is concept that **allows an application to declare whether or not it wants to share an OS entity** like a file. This allows threads to communicate intent to the OS so that the kernel can optimize the shared data structures. If a thread declares that it doesn't need to share a file descriptor, then the kernel knows that it doesn't need to replicate it across the cores.
+
+Lastly, another facility is that **cores can be dedicated to kernel activity**. That way we can confine the locality of kernel data structures to a few cores. 
+
+### Virtualization
+
+Can virtualization be extended to a multi-processor? 
