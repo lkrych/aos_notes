@@ -666,3 +666,71 @@ The suggestion of the tornado system is that consistency is managed through a pr
 Why does this help?
 
 The reason is that hardware cache coherence can be indiscriminate about how it updates. 
+
+### Traditional OS Structure
+
+<img src="resources/4_shared_memory/traditional_structure.png">
+
+Just to place some of this into perspective, let's look at how memory is managed in a traditional OS.
+
+A page cache is stored in DRAM, this cache supports both the file system and virtual memory system. The filesystem has opened files explicitly from storage, and they live in the page cache. And processes are executing in virtual memory and the virtual memory is backed by physical memory, which is the page cache. 
+
+For the purpose of our discussion we will focus on only the virtual memory subsystem. The data structures that are kept per process are the **process control block (PCB)**, **TLB** (if in software), **page table (PT)** that describes the mapping between the virtual pages and the physical memory in the DRAM. These are **managed per process**.
+
+For scalability we want to eliminate as many of these data structures as possible.
+
+### Objectization of Memory Management
+
+<img src="resources/4_shared_memory/objectization.png">
+
+Using an object as a structuring mechanism let's talk about how we can restructure the critical components of an OS. 
+
+The address space of a process is shared by all the threads in a multithreaded program. We represent it in a computer as a **process object**, bu you can think of it as something like a process control block (PCB). It is shared by all the threads on the same CPU. 
+
+It's possible that the application might be accessing different portions of the address space and therefore there is no reason to have a centralized data structure to describe the entire address space of the process. So what we can do is **take the address space and break it into regions**.
+
+We also want to carve up the backing store, so that the connection to disk is similarly split up. This is called creating a **file cache manager** for each region.
+
+An interesting analogy might be the partitioning/sharding of databases.
+
+<img src="resources/4_shared_memory/objectization2.png">
+
+Let's think about what the workflow of handling a page fault with this new structure:
+
+1. The thread t1 is executing and incurs a page fault.
+2. The thread goes to the process object which given a VPN, indicates which region the memory lives in.
+3. The region object will contact the file cache manager that corresponds to the region.
+4. The FCM checks to see what the backing file for the missing page is and it does so by contacting the COR object. It also needs to grab a physical frame from the DRAM object.
+5. The COR (cached object representation) object does the I/O and saves the frame into the free frame gathered by the FCM.
+6. The FCM -> Region -> TLB -> T1 which can be resumed.
+
+How are region objects replicated? Are they replicated for every core, for every group of processors?
+
+The **process object is replicated once per CPU**. All the cores on the CPU can share this process object because ultimately the TLB is a common entity for the entire processor and because the process object is modifying the TLB, we can have a single process object that manages the TLB.
+
+The region object represents a portion of the address space. We don't know *a priori* how many threads may access a particular region. It is definitely a candidate for a partial replication because it is in the critical path of a page fault. Region objects are replicated one per group of processors. **The granularity of replication decides the exploitable concurrency for parallel page fault handling**.
+
+For the FCM object, it is backing a region. So that means there is a 1-to-1 correspondence between the region and the FCM. The COR is dealing with physical entities, and since we are dealing with physical entities, there **should probably be a shared object for COR** (singleton object). The DRAM object can have several representations. There could be a DRAM object for each processor in a SHM system.
+
+<img src="resources/4_shared_memory/objectization3.png">
+
+### Advantages of a clustered object
+
+Clustered objects offer several advantages.
+
+The object reference is same for all the nodes, regardless of which node a service is executing, they all have the same reference. Under the covers however you can have incremental optimization of the implementation of the object. 
+
+The advantage of the replication is that the **object references can access their respective replicas independently**. This means **less locking**. This means page fault handling (as one example) will scale with the number of processes!
+
+### Implementation of Clustered Objects
+
+Given an object reference there is a data structure in the OS called a **translation table**. This **maps an object reference to a representation in memory**.
+
+<img src="resources/4_shared_memory/tornado2.png">
+
+
+If an object reference isn't in the translation table yet, there is a miss and the object miss handler is activated. This handler consults a table called the miss handling table, a mapping between the object reference and the handler that consults it. The handler returns this object reference and installs it into the translation table. 
+
+The miss handling table is itself partitioned. It is not replicated. All of these are things that are being done to implement a clustered object. If there is a miss on the miss handling table, the global miss handler is activated and cleans things up.
+
+### Non-Heirarchical Locking
