@@ -27,7 +27,7 @@
     * [Lightweight RPC]()
     * [Scheduling]()
     * [Shared Memory Multiprocessor OS]()
-    * [Barrier Synchronization]()
+* [Barrier Synchronization](lectures/barrier_synchronization.md)
 * Distributed Systems
     * [Introduction]()
     * [Lamport Clocks]()
