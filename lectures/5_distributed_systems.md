@@ -5,6 +5,11 @@
     * [Defining Distributed Systems](#defining-distributed-systems)
     * [Happened Before Relationship](#happened-before-relationship)
 * [Lamport's Clock](#lamports-clock)
+    * [Logical Clock Conditions](#logical-clock-conditions)
+    * [Lamport's Total Order](#lamport's-total-order)
+    * [Distributed Mutual Exclusion Lock Algorithm](#distributed-mutual-exclusion-lock-algorithm)
+    * [Real World Scenarios](#real-world-scenarios)
+* [Latency Limits](#latency-limits)
 
 ## Introduction
 
@@ -130,5 +135,6 @@ This brings us to **Lamport's physical clock**. In physical/real time, event `A`
 1. The first condition is that there is a bound on individual clock drift. 
 2. There is a bound on mutual drift. 
 
-Let's now look at the relationship between interprocess communication time and invidual/mutual clock drift. 
+Lamport's clock is the **theoretical underpinning for achieving deterministic execution in distributed systems**.
 
+## Latency Limits
