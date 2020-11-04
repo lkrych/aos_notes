@@ -138,3 +138,32 @@ This brings us to **Lamport's physical clock**. In physical/real time, event `A`
 Lamport's clock is the **theoretical underpinning for achieving deterministic execution in distributed systems**.
 
 ## Latency Limits
+
+This chapter will move from the theoretical underpinnings of modeling a distributed system to talking about the more practical matter of **how OS's implement the network layer software stack in an efficient way**.
+
+<img src="resources/5_distributed/latency_limits_intro.png">
+
+**Latency** is the elapsed time for an event.
+
+**Throughput** is the number of events executed per unit time. **Bandwidth** is a measure of throughput.
+
+RPC is the basis for client/server based distributed systems. In the context of this lesson, latency is the time it takes for an application-generated message to reach its destination.
+
+There are two components to the latency that is observed for message communication in RPC system:
+
+1. **Hardware overhead** - dependent upon how the network is interfaced to the computer. Typically, the network controller copies data from system memory to its internal buffer (usually via DMA) and then queues them up for transmission. 
+2. **Software overhead** - what the OS tacks onto the hardware overhead of moving the bits onto the network. 
+
+The focus of this lesson will be to reduce the software overhead. 
+
+### RPC Latency
+
+<img src="resources/5_distributed/rpc_components.png">
+
+1. **client call** - sets up arguments for the call, and then make a call into the kernel. Kernel validates the call and then marshals the arguments into a network packet and sets up the controller to do the network transmission.
+2. **controller latency** - Once the packet is ready, the controller needs to DMA the message into its internal buffer and then put the message out on the wire.
+3. **time on wire** - This really depends on the distance between the client and the server. 
+4. **Interrupt Handling** - The packet arrives in the form of an interrupt to the OS. Part of handling the interrupt is moving the bits that come into the wire into the controller buffer and then from the controller buffer to system memory.
+5. **Server setup to execute** - The server procedure needs to be located, and then the procedure needs to be dispatched with the unmarshalled arguments of the packet. Then the server can actually execute.
+6. **Server Execution and Reply** - This is application-specific latency, it depends on what the actual server procedure does. However, when the server finishes, the results are marshalled into a response packet and the controller picks it up. 
+7. **Client setup and receive results**
