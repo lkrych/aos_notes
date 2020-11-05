@@ -167,3 +167,36 @@ The focus of this lesson will be to reduce the software overhead.
 5. **Server setup to execute** - The server procedure needs to be located, and then the procedure needs to be dispatched with the unmarshalled arguments of the packet. Then the server can actually execute.
 6. **Server Execution and Reply** - This is application-specific latency, it depends on what the actual server procedure does. However, when the server finishes, the results are marshalled into a response packet and the controller picks it up. 
 7. **Client setup and receive results**
+
+<img src="resources/5_distributed/rpc_overhead.png">
+
+What are the sources of overhead in RPC?
+
+1. Marshaling  
+2. Data Copying 
+3. Control Transfer 
+4. Protocol Processing 
+
+In general, to reduce latency, an OS developer should think about how to use the hardware. 
+
+### Marshaling and Data Copying
+
+Marshaling refers to the fact that the semantics of the RPC call is something that the OS doesn't understand. The arguments that are passed between client and server are something that are only understood by those two entities, the OS doesn't understand anything about the contract.
+
+<img src="resources/5_distributed/rpc_marshaling1.png">
+
+**Marshaling** is the term used to describe **the accumulation of arguments in the RPC call and making one contiguous network packet out of it** so that it can be handed to the kernel for delivery.
+ 
+The **biggest source of overhead in marshaling is data-copying**.
+
+There are potentially three copies in the data marshalling process. 
+
+1. The arguments of the client live on the stack. The Client stub needs to take the arguments from the stack and convert them into a contiguous sequence of bytes called an RPC message. 
+2. The client is a userspace program. The RPC message needs to be copied into the Kernel's internal buffer.
+3. The third copy happens when the network controller does DMA to copy the RPC message from the Kernel buffer to the wire. 
+
+The network controller is part of the hardware, so we aren't going to analyze how to improve this process. That leaves us with copies 1 and 2. 
+
+The first idea we will explore is if we can eliminate the copy made by the client stub. If the client stub lives in the kernel, it can directly copy from the stack into the kernel buffer. This will eliminate the intermediate copy. However, it also means we need to inject some code into the kernel, is that something we want to do?
+
+<img src="resources/5_distributed/rpc_marshaling2.png">
