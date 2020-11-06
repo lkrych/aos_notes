@@ -200,3 +200,28 @@ The network controller is part of the hardware, so we aren't going to analyze ho
 The first idea we will explore is if we can eliminate the copy made by the client stub. If the client stub lives in the kernel, it can directly copy from the stack into the kernel buffer. This will eliminate the intermediate copy. However, it also means we need to inject some code into the kernel, is that something we want to do?
 
 <img src="resources/5_distributed/rpc_marshaling2.png">
+
+An alternative to dumping code into the kernel is to leave the stub in the userspace, but to have a **structured mechanism for communicating between the client stub and the kernel**. That structured mechanism is a **shared descriptor**. The shared descriptor describes where the arguments live on the stack and how big they are. 
+
+<img src="resources/5_distributed/rpc_marshaling3.png">
+
+### Control Transfer
+
+Control transfer refers to the context switches that have to happen in order to process an RPC call and return.
+
+<img src="resources/5_distributed/control_transfer.png">
+
+In the simplest possible situation, there will be 4 context switches:
+
+1. The client makes the RPC call from userspace, there is a context switch so the kernel can send the RPC message onto the wire.
+2. The server kernel receives the client RPC message, and marshals it into userspace so that the server method can be called. 
+3. The server produces the result and marshals the result into an RPC message which the server kernel sends out on the wire.
+4. The client kernel receives the server result and marshals it into the userspace so that the application can use it. 
+
+Which of these are critical context switches? It turns out **only two of the context switches are in the critical path** of latency: The context switches that receive the messages. The 1st and 3rd context switches are merely there to keep the hosts occupied while they are waiting for more RPC communication.
+
+<img src="resources/5_distributed/control_transfer2.png">
+
+We can reduce the context switches down to 1 by just spinning the client machine. 
+
+### Protocol Processing
