@@ -225,3 +225,12 @@ Which of these are critical context switches? It turns out **only two of the con
 We can reduce the context switches down to 1 by just spinning the client machine. 
 
 ### Protocol Processing
+
+What transport should we use for RPC? How can we reduce latency in the information transfer? Often times performance and reliability are at odds with each other. Let's assume that the LAN is reliable and not worry about the reliability so we can optimize performance.
+
+Let's take a look at all the things that could go wrong in a message transmission and analyze why they might not matter if we have a reliable LAN.
+
+1. No low-level ACKs. Probably not necessary in a LAN, maybe a WAN. In an RPC system with proper timeouts, the result returning can serve as an ACK.
+2. Hardware checksum for packet integrity. In a LAN, we should probably just use a hardware checksum instead of a software checksum.
+3. No client side buffering. Since a client is spinning, we don't need to buffer a message on the client side. We can just resend the message if there is a timeout and the message is lost.
+4. Overlap server-side buffering with result transmission. We do want to buffer on the server side because we could lose the result from the server side process.
