@@ -234,3 +234,88 @@ Let's take a look at all the things that could go wrong in a message transmissio
 2. Hardware checksum for packet integrity. In a LAN, we should probably just use a hardware checksum instead of a software checksum.
 3. No client side buffering. Since a client is spinning, we don't need to buffer a message on the client side. We can just resend the message if there is a timeout and the message is lost.
 4. Overlap server-side buffering with result transmission. We do want to buffer on the server side because we could lose the result from the server side process.
+
+## Active Networks
+
+In the previous lesson we learned tricks we could use as OS designers to optimize RPC software. Of course, user interactions extend beyond a LAN. How do we think about communication that goes out into the wild-wild-west of the Internet?
+
+Routing is part of the functionality of the network layer of the protocol-stack of the OS. For the next part of the lesson, we will ask **what can be done at intermediate routers to accommodate QoS needs for individual packet loads**.
+
+### Routing on the Internet
+
+<img src="resources/5_distributed/network_routing.png">
+
+At the source node a network packet is created, this packet is built through the layers of the network stack, and then sent out on the network. It goes through intermediate routers to get to the destination.
+
+The routers on the internet don't inspect the packet, they look at the destination node and figure out the next hop for the packet. They make this decision by consulting their routing table.
+
+**What does it mean to make these nodes active?** It means that instead of just doing a passive table lookup, the next hop is determined by actively executing code. One model of this is that the packet has some code bundled up with it, and the code is executed by the router to determine where it should go.
+
+This sounds clever, but slow. It is an **opportunity to virtualize the traffic flow** for network traffic independent of other network flows. There are lots of challenges to this vision.
+
+## Active Network Implementation
+
+<img src="resources/5_distributed/active_networks.png">
+
+The protocol stack of the OS needs to be enhanced to service the API of the active network. The application that is now relying on the active network needs to provide QoS constraints that the OS uses to perform whatever 'activity' it needs to perform.
+
+There are two problems:
+1. Changing the OS is non-trivial. The protocol stack already has a hundred thousand lines of code. This is difficult.
+2. Not all routers on the internet are open. How would you get them to comply with your changes?
+
+The ANTS (Active Node Transfer System) toolkit, tried to show how useful this vision would be. **Instead of modifying the protocol stack, they provided an application-level package** to help create new headers and payload to pass to the protocol stack.
+
+<img src="resources/5_distributed/ants_routing.png">
+
+Once a packet is packaged up with the header, it can be sent out into the Internet. If intermediate routers are equipped with ANTS software, they can read the ANTS header and do whatever magic they want to do with the packet. Otherwise, the packet is backwards-compatible and goes through the normal routing flow.
+
+The edge of the network could be a perfect place for placing ANTS software.
+
+### ANTS Capsule and API
+
+<img src="resources/5_distributed/ants_capsule.png">
+
+Let's take a deeper look into the ANTS package.
+
+The ANTS header is composed of three parts:
+1. **The original IP header** - which allows for backwards compatibility.
+2. **The ANTS header** - There are two important fields here, the `type field` identifies the code that needs to be executed, the `prev field` is the identity of the upstream node that successfully processed the capsule.
+3. **The payload** - the data needed to be transferred
+
+The capsule itself does not contain the code that needs to be executed. It only contains a `type field`. 
+
+The ANTS package on the node contains the instructions (code) for the active network. The `type field` is a pointer to these instructions. Capsules will retrieve this code and the node will execute it.
+
+What are the actions taken on capsule arrival? The capsule doesn't contain code, it contains the `type field`, which is a cryptographic fingerprint of the capsule code. This serves as a reference for the code itself.
+
+<img src="resources/5_distributed/ants_capsule2.png">
+
+When a node receives a capsule there are two things that can happen:
+1. **The node has seen capsules of this type before**, if that is the case, then it is likely that the code for that type is present in the storage of the node, so all the node has to do is retrieve this code and execute it.
+2. **The node has not seen capsules of this type before**, in this case, the node needs to reach out to the previous node and ask for the type code so that it can save it in its local cache. The current node then checks the cryptographic hash of the type code and checks it against the original capsule.
+
+If the previous node doesn't contain the capsule code, it will drop the capsule.
+
+### Potential Applications
+
+1. Protocol independent multicast
+2. Reliable multicast
+3. Congestion notification
+4. Private IP
+5. Anycasting
+
+This is useful for building applications that are hard to build in the Internet.
+
+
+### Pros and Cons
+
+Pro
+
+1. Flexibility from application perspective. 
+
+Con
+
+1. Protection threats. There will no be many more entry points for malicious users.
+2. Resource management threats. Because we are executing code at a router, the result of this execution could be that you proliferate packets in the internet. This could become a DDoS threat. 
+3. Needs buy in from router vendors
+4. Software routing throughput might not match what is needed at the internet core
