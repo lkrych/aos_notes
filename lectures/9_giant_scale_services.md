@@ -132,4 +132,16 @@ Several processing steps in giant scale services are expressible in the MapReduc
 * common in giant scale services
 * all on big data sets
 
-All the heavylifting that needs to be done for this data crunching are taken care of by the programming framework.
+All the heavy lifting that needs to be done for this data crunching are taken care of by the programming framework runtime.
+
+### MapReduce Runtime
+
+<img src="resources/9_giant_scale/map_reduce_runtime.png">
+
+1. The input data is split.
+2. A master node is spawned as well as all the worker threads. The master node oversees the whole operation and coordinates the work between the map workers and the reduce workers.
+3. The master assigns some number of threads as map workers, and the others as reduce workers. Each worker thread grabs one split of the input data.
+4. The master assigns some work to the reduce workers. The number of reducer threads is specified by the app developer. This typically correspond to the amount of entities that need to be reduced to.
+5. Each mapper worker stores R intermediate files on their local disk, when they are done, they inform the master, which transmits the data to the respective reducers.
+
+
