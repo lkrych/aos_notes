@@ -142,6 +142,22 @@ All the heavy lifting that needs to be done for this data crunching are taken ca
 2. A master node is spawned as well as all the worker threads. The master node oversees the whole operation and coordinates the work between the map workers and the reduce workers.
 3. The master assigns some number of threads as map workers, and the others as reduce workers. Each worker thread grabs one split of the input data.
 4. The master assigns some work to the reduce workers. The number of reducer threads is specified by the app developer. This typically correspond to the amount of entities that need to be reduced to.
-5. Each mapper worker stores R intermediate files on their local disk, when they are done, they inform the master, which transmits the data to the respective reducers.
+5. Each mapper worker stores R intermediate files on their local disk. When they are done, they inform the master node.
+6. The reducer worker needs to do a remote read to pull the intermediate files from the workers. The reducer worker than sorts the input and then calls the reduce function for each key in the intermediate results.
+7. Finally the reducer worker writes to its output file. It then informs the master that it is done.
 
+<img src="resources/9_giant_scale/map_reduce_runtime2.png">
 
+The data center might not have the number of machines needed to run the MapReduce function. It is the **role of the master node to figure out how to use the available resources**.
+
+### Issues handled by MapReduce runtime
+
+There is a lot of work done by the runtime system to ensure that MapReduce functions as expected.
+
+The master data structures include:
+
+1. Bookkeeping - the location of files created by the completed mapper workers. The namespaces of the files created by the mappers.
+2. Bookkeeping - scoreboard of mapper/reducer assignments because the number of machines that may be available might be less than the number of machines that are needed.
+3. Fault tolerance - for a variety of reasons, a worker might go offline. The master needs to be able to start new instance if there is no timely response from a worker. Completion messages need to be filtered out for redundant work.
+4. Locality Management - make sure that memory usage is managed carefully for each of the machines. Accomplished using googleFS. 
+5. Task Granularity - Good load balance of the computational resources. The programming framework uses a hashing function to split up the work.
