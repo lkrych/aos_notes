@@ -10,6 +10,15 @@
     * [Distributed Mutual Exclusion Lock Algorithm](#distributed-mutual-exclusion-lock-algorithm)
     * [Real World Scenarios](#real-world-scenarios)
 * [Latency Limits](#latency-limits)
+* [RPC Latency](#rpc-latency)
+    * [Marshaling and Data Copying](#marshaling-and-data-copying)
+    * [Control Transfer](#control-transfer)
+    * [Protocol Processinng](#protocol-processing)
+* [Active Networks](#active-networks)
+    * [Routing on the Internet](#routing-on-the-internet)
+    * [Implementation](#active-network-implementation)
+    * [ANTS API](#ANTS-Capsule-and-API)
+* [Systems from Components](#systems-from-components)
 
 ## Introduction
 
@@ -319,3 +328,15 @@ Con
 2. Resource management threats. Because we are executing code at a router, the result of this execution could be that you proliferate packets in the internet. This could become a DDoS threat. 
 3. Needs buy in from router vendors
 4. Software routing throughput might not match what is needed at the internet core
+
+## Systems from Components
+
+Hardware design utilizes a component-based approach to build large and complex hardware systems. Can we mimic this method in software systems? Let's explore :).
+
+In this section we will dicuss the paper, Building Reliable High Performance Communication Systems.
+
+IO Automata is utilized to specify the system requirements of the code. 
+
+The second part of the paper is converting the specification into code that can be executed. The language used is OCAML. OCAML has some properties that make it a good candidate for doing component-based design. It is object-oriented, and the formal semantics of ocaml are similar to IO Automata. The code is efficient and it is similar to C. 
+
+Lastly, the code is optimized using nuprl, a framework for optimizing OCAML code. The input is OCAML code, the output is verified to be functionally-equivalent, but more optimized than the input. 
