@@ -55,3 +55,16 @@ Spring is network OS. We just described the execution of the nucleus on a single
 Object invocation is extended across the network using network proxies. Proxies are just interfaces to the network, they can be implemented with whatever protocol you desire to provide extensibility. The proxies are invisible to the client and the server. It just looks like they are invoking a method to a local object. (This kind of reminds of the stub in GRPC).
 
 *Note the network handle is not accessed through the nucleus.* 
+
+### Secure Object Invocation
+
+It may be necessary for a server object to provide different privileges to different clients.
+
+<img src="resources/6_os_examples/front_object.png">
+
+In order to facilitate this differential invocation, the spring model uses the idea of a front object. 
+
+The front object is a mechanism created by the service developer, it is not something that is provided by the Spring microkernel.
+
+The front object registers the door that accesses it, and it checks the access control list (ACL) for the privileges of the requesting client domain.
+
