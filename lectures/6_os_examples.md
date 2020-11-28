@@ -1,6 +1,14 @@
 # OS Examples
 
 ## Table of Contents
+* [Introduction](#introduction)
+* [Procedural vs Object-oriented design](#procedural-design-vs-object-based-design)
+* [Spring Approach](#spring-approach)
+    * [Nucleus Microkernel](#nucleus-microkernel)
+    * [Distributed Object Invocation](#object-invocation-across-the-network)
+    * [Secure Object Invocation](#secure-object-invocation)
+    * [Virtual Memory Management](#virtual-memory-management)
+
 
 ## Introduction
 
@@ -10,7 +18,7 @@ In this module we will see examples of how distribute object technology is influ
 
 There is a always **a conundrum in the design of OS**'s. Should we **create a new one, or should we create a better implementation** of a known OS?
 
-### Procedure design vs Object-based design
+### Procedural design vs Object-based design
 
 With procedural design, code is written as a monolithic entity wherein shared state can be global, and private state can be managed by individual functions. This means the interface between subsystems is through procedure calls. State is strewn throughout the monolith.
 
@@ -85,3 +93,17 @@ If cache coherence is needed, it is responsible for pager objects to coordinate 
 ### Spring System Summary
 
 <img src="resources/6_os_examples/spring_summary.png">
+
+### How are client-server relationships managed in the Spring system?
+
+The dynamic relationship between the client and the server are managed by an entity called the subcontract. 
+
+<img src="resources/6_os_examples/subcontract.png">
+
+
+The subcontract is the implemented interface for communication between the client and the server. It hides the runtime behavior of an object from the interface. This means that it handles all of the details of the connections between the system. New subcontracts can be loaded dynamically and not effect the client behavior, because the subcontract is a strong interface.
+
+So, what does the interface look like? It has a marshalling and unmarshalling interface. Once this has been done, the client side can invoke the method on the server. The subcontract on the server side can create, revoke, or process invocations.
+
+## Java RMI
+
