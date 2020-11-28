@@ -68,3 +68,20 @@ The front object is a mechanism created by the service developer, it is not some
 
 The front object registers the door that accesses it, and it checks the access control list (ACL) for the privileges of the requesting client domain.
 
+### Virtual Memory Management
+
+VMM is part of the kernel of Spring. There is a per-machine VMM. It is in charge of managing the linear address space of every process. The VMM breaks the linear address space into regions (set of pages). 
+
+<img src="resources/6_os_examples/memory_object.png">
+
+The second abstraction is of a memory object. Memory objects are an abstraction that allows a memory region to be associated to something living on a disk like files, swap space.
+
+So how are these memory objects used? To bring a memory object into virtual memory, the Spring system uses a pager object to establish a connection between virtual memory and physical memory. It is the responsibility of the pager object to create the mapping between the two. The pager object creates a cached object representation in DRAM. 
+
+<img src="resources/6_os_examples/pager_objects.png">
+
+If cache coherence is needed, it is responsible for pager objects to coordinate in the use of the cache representations.
+
+### Spring System Summary
+
+<img src="resources/6_os_examples/spring_summary.png">
