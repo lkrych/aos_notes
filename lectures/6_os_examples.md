@@ -8,6 +8,8 @@
     * [Distributed Object Invocation](#object-invocation-across-the-network)
     * [Secure Object Invocation](#secure-object-invocation)
     * [Virtual Memory Management](#virtual-memory-management)
+* [Java RMI](#java-rmi)
+    * [How does RMI work?](#how-does-rmi-work)
 
 
 ## Introduction
@@ -107,3 +109,59 @@ So, what does the interface look like? It has a marshalling and unmarshalling in
 
 ## Java RMI
 
+Much of the heavy-lifting that an application developer has to do while building a client-server system using RPC, like marshalling/unmarshalling are all subsumed by the Java remote/distributed object runtime.
+
+Let's address some key features of the Java remote/distributed object model.
+
+* **Remote Object** - objects accessible from different address spaces.
+* **Remote Interface** - declarations of methods in a remote object
+* **Failure Semantics** - Dealing with exceptions in the runtime
+* **Similarities and differences with local objects** - object references can be params, the difference is that in the distributed model, the object passes them as values. In the local objects, they can be used as references and directly modify the entity in memory.
+
+The following images show how easy it is to interact with remote objects using RMI.
+
+Instantiating the server is as simple as registering the object instance with the RMI runtime.
+
+<img src="resources/6_os_examples/rmi_server.png">
+
+Interacting with the server looks like normal procedure calls.
+
+<img src="resources/6_os_examples/rmi_client.png">
+
+### How does RMI work?
+
+At the core of the RMI implementation is the remote reference layer.  The client side stub uses this layer to initiate a request-response cycle.
+
+<img src="resources/6_os_examples/remote_reference_layer.png">
+
+The transport layer sits below the RRL layer. The abstractions that the transport layer in RMI provides are:
+* **Endpoint** - A protection domain, a sandbox for execution. A table of remote objects. 
+* **Connection Management** - details for connecting endpoints together. Setup, teardown, listening for connections, establishing connenctions. 
+    * **Channel** - Abstraction to represent the connection between a client and server. 
+    * **Connection** - Abstraction for I/O. The abstraction that is written to by the endpoint.
+
+<img src="resources/6_os_examples/rmi_connection.png">
+
+## Enterprise Java Beans
+
+How do you structure the software for a large scale distributed service?
+
+Organizations provide a single point of service, an abstracted interface for interaction. Inside, they are a complex organization of moving parts that all work together to service the end product. Sometimes, it's even more complicated in that internal components require external resources.
+
+The software stack of these types of services can be organized efficiently using object-oriented programming.
+
+What are our goals in serving users? Decreasing network requests (to reduce latency), reducing security risks (the business logic should not be compromised), increasing concurrency for individual requests (there is an opportunity to exploit parallelism).
+
+To structure these N-tier applications, we will talk about the Enterprise Java Beans framework, this is just an example, and many other frameworks suffice. 
+
+<img src="resources/6_os_examples/ejb.png">
+
+There are 4 containers (protection domains in a Java VMM). 
+
+1. Client container - reside on webserver, interacts with browser
+2. Applet container - reside on webserver
+3. Web container - dynamically creates pages
+4. EJB container - manages business logic
+(Honorable mention) Database server - is connected to by the EJB container. 
+
+The key idea to this structure is that we want to **reuse components**. The word **bean** is used to describe an object of reuse. This could refer to an entity (persistence object with primary key), a session (a stateful/stateless connection with another computer), or a message (useful for asynchronous behavior). 
