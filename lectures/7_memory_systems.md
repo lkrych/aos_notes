@@ -34,3 +34,62 @@ When the VMM needs to replace the working set, instead of paging out the current
 
 ### Terminology
 
+With GSM, "**cache**" **refers to physical memory** not the processor cache.
+
+The word "community", is used to describe handling page faults at a particular node.
+
+We are going to use peer memories as a supplement for the disk. **The physical memory for a node is split into two components**:
+1. **Local memory** - working set of the currently executing processes.
+2. **Global memory** - similar to a disk, out of my current physical memory, this is the part that is used as space for holding swapped-out pages. 
+
+This split is dynamic, it is made in response to memory pressure. 
+
+There are two states to memory pages in GMS, **private or shared**. A private page is local only to one node. A shared page is local amongst many nodes. If a page is in the global cache, it is still private. In the global cache, it is basically just a private copy, but stored somewhere else.
+
+The whole idea of GMS is to **serve as a paging facility**. Coherence for shared pages is outside the purview of GMS, it considers this an application problem. Why? You can think about a uniprocessor example where many processes are sharing pages. It isn't really the VMM's responsibility to make sure that these pages are coherent, thus, in GMS, it is not it's responsibility.
+
+Managing age information of pages in a distributed system of pages is one of the key technical contributions of the G<S> system.
+
+### Handling Page Faults
+
+Let's look at an example of a page fault in a GMS system with two hosts, P and Q. 
+
+Let's say we are running a process on host P, and it page faults on same page X. When that happens, we have to find out if that page is in the global cache of the cluster.
+
+<img src="resources/7_memory_systems/gms_page_fault1.png">
+
+To handle the page fault, 
+1. node P sends a search request for page X across the GMS. 
+2. The GMS locates the page on host Q.
+3. Host P makes a request to host Q for page X. 
+4. Host Q sends page X to P across the network. 
+5. Host P adds X to its current working set. This means that it needs to remove something from its local global memory (community service) and page it out to GMS. 
+
+<img src="resources/7_memory_systems/gms_page_fault2.png">
+
+The second case is similar to the common case except that the memory pressure is exacerbated on host P. There is so much memory pressure that all the physical memory that is available on P is taken up by the working set. There is no community service happening on host P. To handle the page fault,
+
+1. The steps are roughly the same as above except the candidate/victim page for paging out comes from the local cache. 
+
+The third page fault case happens when page X doesn't exist in the community service/global cache. 
+
+<img src="resources/7_memory_systems/gms_page_fault3.png">
+
+1. When a page fault on node P happens, it searches across the GMS.
+2. It isn't found, so it makes a request for the page on its disk.
+3. When the page comes in, it needs to page out into the GSM.
+4. It uses LRU or some other scheme to page out a page in its working set. It's paged out to the node with the globally oldest page. 
+5. If the node with the oldest page has memory pressure, it has to make some room for the new page. Because all paged out pages in GMS are clean, it can just discard the oldest page without worrying about writing it back to disk. 
+6. However, if the oldest page has to be in local part of the node, then it is conceivable that the page is dirty and needs to be paged out to disk. 
+
+So far the cases we've considered have assumed that the page we are faulting on is private to a process. Let's consider the case where the page is actively shared. In this scenario, two hosts, P and Q are both actively using a page to do some work. 
+
+<img src="resources/7_memory_systems/gms_page_fault4.png">
+
+When host P, needs page X
+1. It makes a request for page X to the GMS.
+2. The page is found in the local memory of host Q. 
+3. Because it is in the current working set of host Q, we don't want to yank it out of memory. We want to **make a copy**.
+4. Again, if there is pressure, the host P needs to page out a least-recently used page. 
+5. The page is paged-out to the node with the globally oldest page. 
+
