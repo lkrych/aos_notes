@@ -119,4 +119,18 @@ The initiator node will then do two things:
 1. It will calculate the minimum age of all the M pages that are going to be replaced. Any page that is less than the minAge will be safe from eviction.
 2. It calculates the weight parameter for each node, which is the fraction of pages to be evicted in the current epoch that exist on the node. 
 
-Remember, the algorithm doesn't know the future. So, these are expected calculations.
+Remember, the algorithm doesn't know the future. So, these are **expected calculations**.
+
+<img src="resources/7_memory_systems/page_fault_algorithm3.png">
+
+The **initiator node is new at each epoch**. The initiator is chosen to be the node with the highest weight. Why? Because **the weight parameter indicates that it is the least active node**. It is the node currently doing the least amount of work, that's why it is storing all the other nodes pages.
+
+This election process happens because the initiator node sends back all the weights to each of the nodes in the system.
+
+So **what is the action at a node when there is a page fault?**
+
+If upon a page fault, a node needs to evict a page Y, if the age of the page is more than the minimum page, than we know it is going to be replaced, we can just drop it. 
+
+However, if the age of the page that needs to be replaced is less than this minimum, we send it to a peer to store. **Which peer is it sent to? It depends, usually it is the node with a higher weight.** 
+
+This algorithm approximates a global LRU algorithm.
