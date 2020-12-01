@@ -10,6 +10,7 @@
     * [Virtual Memory Management](#virtual-memory-management)
 * [Java RMI](#java-rmi)
     * [How does RMI work?](#how-does-rmi-work)
+* [Enterprise Java Beans](#enterprise-java-beans)
 
 
 ## Introduction
@@ -165,3 +166,4 @@ There are 4 containers (protection domains in a Java VMM).
 (Honorable mention) Database server - is connected to by the EJB container. 
 
 The key idea to this structure is that we want to **reuse components**. The word **bean** is used to describe an object of reuse. This could refer to an entity (persistence object with primary key), a session (a stateful/stateless connection with another computer), or a message (useful for asynchronous behavior). 
+
