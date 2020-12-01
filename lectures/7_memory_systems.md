@@ -93,3 +93,30 @@ When host P, needs page X
 4. Again, if there is pressure, the host P needs to page out a least-recently used page. 
 5. The page is paged-out to the node with the globally oldest page. 
 
+### Page Fault Algorithm
+
+<img src="resources/7_memory_systems/page_fault_algorithm.png">
+
+The behavior of the GMS algorithm is as follows.
+
+If there is an idle node in the LAN, then the node's working set is going to decrease as it accommodates more and more of its peers pages that are swapped out to fit in the global cache. Eventually, a completely idle node because a memory server for peers on the network.
+
+The **most important parameter in the working GMS system is age management**. We need to identify the globally oldest page whenever we want to do replacements.
+
+One of the goals of distributed systems, or honestly, probably systems in general, is to **make sure that any management of the system doesn't bring down the productivity of any particular node**. This means that management work is distributed and is not centralized in one node. 
+
+Because the **GMS system is dynamic, each node needs to understand how to communicate its needs with all the other nodes**.
+
+<img src="resources/7_memory_systems/page_fault_algorithm2.png">
+
+In GMS, management is broken up along two axes, space and time. Two parameters are used to describe an epoch (the granularity of management work done by a node), T, the maximum duration of an epoch. Or space-bound, M, maximum number of replacements.
+
+This sounds complex but it is pretty simple. If a certain amount of time (T), passes, it's time to pass the management work of GMS to another node. If the node has done a certain amount of management work (M), then it is time to pass the management work to another node. 
+
+At the start of each epoch, every node is going to send some information to the initiator (the node doing the work). That information will be the age of each page in its system (both local and global).
+
+The initiator node will then do two things:
+1. It will calculate the minimum age of all the M pages that are going to be replaced. Any page that is less than the minAge will be safe from eviction.
+2. It calculates the weight parameter for each node, which is the fraction of pages to be evicted in the current epoch that exist on the node. 
+
+Remember, the algorithm doesn't know the future. So, these are expected calculations.
