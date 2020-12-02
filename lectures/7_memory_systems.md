@@ -5,6 +5,12 @@
 * [Global Memory Systems](#global-memory-systems)
     * [Introduction](#introduction)
     * [Big Picture](#big-picture)
+    * [Terminology](#terminology)
+    * [Page Faults](#handling-page-faults)
+    * [Page Fault Algorithm](#page-fault-algorithm)
+    * [Implementation in Unix](#implementation-in-unix)
+        * [Data Structures](#data-structures)
+* [Distributed Shared Memory](#distributed-shared-memory)
 
 ## Global Memory Systems
 
@@ -189,3 +195,37 @@ In the case of eviction, the evicting node has to tell the owning node that it e
 Updating nodes about their evicted pages happens in a batch. This is because updating nodes individually for every eviction would be costly. **This is managed by the individual nodes paging daemon**. It is integrated with the GMS, and when the free list falls below a certain threshold, then it will start evicting pages and sending them to nodes that are storing fewer pages. This decision is made using the weight list.
 
 Another case that is uncommon is that the POD information that the node has is stale. This happens when the POD information is being recomputed for the LAN. 
+
+## Distributed Shared Memory
+
+Let's look at another way to exploit remote memory. Let's look at a software implementation of distributed shared memory. We will create an OS abstraction that creates an interface for software that makes the system look like it is using shared memory.
+
+### Implicit Parallelization
+
+Let's start the section with a motivating question. Suppose we have a sequential program. How can we exploit the cluster of machines hooked up through the LAN?
+
+<img src="resources/7_memory_systems/automatic_parallel2.png">
+
+One possibility is to do **automatic parallelization**. In this scheme, instead of writing an explicitly parallel program, we write a sequential program and let someone else identify the opportunity for parallelism in the program and map it to the underlying cluster. 
+
+Typically, this involves a compiler that knows how to sniff out parallel operations. High performance fortran is an example of this. This works pretty well for a certain class of programs - data parallel programs. Characteristics of these types of programs are that data accesses are fairly static and it is determinable at compile time. There is thus limited potential for exploiting parallelism if we result to implicitly parallel programming.
+
+## Message Passing
+
+<img src="resources/7_memory_systems/message_passing.png">
+
+A different model is to write the program as a truly parallel program. 
+
+There are two styles of doing this, we will talk about one of them, **message passing**. In this style, the **runtime system provides a message passing library which has primitives for an application thread to do sends and receives** to other nodes within the cluster. 
+
+One way to think about this model is that it truly reflects the architecture of the system. It respects that each machine has its own CPU and memory. The second project of this class used MPI, to create barriers using message passing.
+
+The only **downside to this style is that it is difficult to program** using this style. It would be easier if we had the notion of shared memory. 
+
+## Distributed Shared Memory
+
+<img src="resources/7_memory_systems/dsm.png">
+
+The alternative to message passing is the abstraction of distributed shared memory. **We want to give the illusion to the application programmer writing an explicitly parallel program that all of the memory that is in the entire cluster is shared**. The DSM library gives the illusion to all of the threads running in each of the nodes.
+
+Therefore programs have an easier transition path from running on an SMP to running on a cluster. 
