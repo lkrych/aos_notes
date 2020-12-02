@@ -210,7 +210,7 @@ One possibility is to do **automatic parallelization**. In this scheme, instead 
 
 Typically, this involves a compiler that knows how to sniff out parallel operations. High performance fortran is an example of this. This works pretty well for a certain class of programs - data parallel programs. Characteristics of these types of programs are that data accesses are fairly static and it is determinable at compile time. There is thus limited potential for exploiting parallelism if we result to implicitly parallel programming.
 
-## Message Passing
+### Message Passing
 
 <img src="resources/7_memory_systems/message_passing.png">
 
@@ -222,10 +222,29 @@ One way to think about this model is that it truly reflects the architecture of 
 
 The only **downside to this style is that it is difficult to program** using this style. It would be easier if we had the notion of shared memory. 
 
-## Distributed Shared Memory
+### Distributed Shared Memory
 
 <img src="resources/7_memory_systems/dsm.png">
 
 The alternative to message passing is the abstraction of distributed shared memory. **We want to give the illusion to the application programmer writing an explicitly parallel program that all of the memory that is in the entire cluster is shared**. The DSM library gives the illusion to all of the threads running in each of the nodes.
 
 Therefore programs have an easier transition path from running on an SMP to running on a cluster. 
+
+### Shared Memory Programming
+
+We've already talked about shared memory synchronization. There are two types of memory access primitives. Locks and barriers.
+
+Locks are used to protect data so that only one thread at a time can mutate the data. Barriers also help with coordination.
+
+For more information please see [these notes](https://github.com/lkrych/aos_notes/blob/master/lectures/4_shared_memory.md#synchronization). 
+
+If you are writing a **shared memory program, there are two types of memory accesses** that are going to happen. One type is the normal reads and writes to shared data that is being manipulated by a thread. The second type is for synchronization variables that are going to be used by the OS or a user-level threads library. In implementing the synchronization primitives, those algorithms are going to use reads and writes to shared memory.
+
+### Memory Consistency and Cache Coherence
+
+Recall that earlier we talked about the [relationship between memory consistency and cache coherence](https://github.com/lkrych/aos_notes/blob/master/lectures/4_shared_memory.md#memory-consistency-models). 
+
+The **memory consistency model** is the **contract between the application programmer and the system**. It answers the 'when' question: **when a shared memory location is modified by a processor, how soon is that change going to be made visible to other processors that have that same memory location in their respective private caches**?
+
+**Cache coherence** is answering the 'how' question: **How is the system implementing the contract of the memory consistency model?**
+
