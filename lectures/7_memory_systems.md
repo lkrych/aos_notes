@@ -134,3 +134,58 @@ If upon a page fault, a node needs to evict a page Y, if the age of the page is 
 However, if the age of the page that needs to be replaced is less than this minimum, we send it to a peer to store. **Which peer is it sent to? It depends, usually it is the node with a higher weight.** 
 
 This algorithm approximates a global LRU algorithm.
+
+### Implementation In Unix
+
+The authors of GSM used a DEC OS as the base system.
+
+<img src="resources/7_memory_systems/unix_imp.png">
+
+There are two key components to the GSM implementation.
+1. **The virtual memory system** - responsible for mapping process virtual address space to physical memory and worrying about page faults, etc.
+2. **The unified buffer cache** - the cache used by the filesystem, exists in physical memory for faster access. It serves as the abstraction for the disk-resident files. Reads and writes to files actually go to this entity. 
+
+<img src="resources/7_memory_systems/unix_imp2.png">
+
+The GMS implementation modifies both of these systems to handle the needs of GMS.
+
+When either system wanted a missing page, they would go to the disk. In GMS, they go to GMS first, :). They call `getPage`,  and GMS will query the network for that missing page. 
+
+Notice that **writes to disk are unchanged**. We do not want to affect the reliability of the system. Only when there is a page fault do we consult GMS.
+
+Remember that the most **important aspect of GMS is retrieving accurate age information** about the files in the system. This isn't too bad for pages housed in the unified buffer cache. We can just consult file handles to check for timestamps. The VMM manages anonymous pages, and these are much harder to determine any information about. To collect information about anonymous pages, a daemon is used to dump information from the TLB. The GMS uses this data dump to derive age information for the anonymous pages. 
+
+#### Data structures
+
+One of the things that GMS has to do is convert a local virtual address into a global identifier (universal ID). The universal ID is derived by concatenating a bunch of information (ip-addr, disk partition, i-node, offset) about the page.
+
+There are three key data structures used in GSM work.
+
+<img src="resources/7_memory_systems/unix_imp3.png">
+
+1. PFD (Page Frame Directory) - Like a page table. **A page table typically associates a virtual address with a physical page frame**. The PFD **has a mapping between a UID an the page frame that backs that UID**. The page can be in one of four different states: local private, local shared, global private, on disk. 
+2. GCD (Global Cache Directory) - A distributed hash table that given a UID, will tell you which node has the PFD. Because it is partitioned, every node may not be able to determine where the PFD lives. How does it now which GCD to consult? See below :)
+3. POD (Page Ownership Directory) - Maps GCD for UID. This is replicated on all the nodes. 
+
+The **path for page fault handling** is as follows:
+
+1. Convert VA to UID
+2. Go to POD and ask who has the PFD for the UID? (this is local to the node requesting it because it is replicated)
+3. Receive the node to query the GCD from
+4. Query the GCD at the node from above for the node that holds the PFD. 
+5. Receive the node to query the PFD from
+6. Query the node for the PFD and grab the page you need.
+
+<img src="resources/7_memory_systems/unix_imp4.png">
+
+One thing to notice about the schema above is that the most common case for a node is that a page is non-shared. The page exists locally on the node. This means that the GCD entry for the page probably exists on the node that is experiencing the fault.
+
+There is another case we need to talk about. What happens when you consult the node that is supposed to have the page frame that you care about and it has dropped that page?
+
+<img src="resources/7_memory_systems/unix_imp5.png">
+
+In the case of eviction, the evicting node has to tell the owning node that it evicted the page. It is something that happens asynchronously, and it's possible that the data structures (GCD) haven't been updated yet to reflect this. 
+
+Updating nodes about their evicted pages happens in a batch. This is because updating nodes individually for every eviction would be costly. **This is managed by the individual nodes paging daemon**. It is integrated with the GMS, and when the free list falls below a certain threshold, then it will start evicting pages and sending them to nodes that are storing fewer pages. This decision is made using the weight list.
+
+Another case that is uncommon is that the POD information that the node has is stale. This happens when the POD information is being recomputed for the LAN. 
