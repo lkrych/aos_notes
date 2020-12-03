@@ -248,3 +248,60 @@ The **memory consistency model** is the **contract between the application progr
 
 **Cache coherence** is answering the 'how' question: **How is the system implementing the contract of the memory consistency model?**
 
+#### Sequential Consistency
+
+<img src="resources/7_memory_systems/seq_consistency.png">
+
+In sequential consistency, every process is making some memory accesses, and from the perspective of the programmer, the accesses are happening in the order that the program executes.
+
+**Sequential consistency** says, that with two separate processors reading and writing to the same variable, **the accesses will happen in program order, but the executions will be arbitrarily interleaved between the processors**. 
+
+A good analogy for sequential consistency is shuffling a deck of cards. 
+
+<img src="resources/7_memory_systems/seq_consistency2.png">
+
+Let's come back to our parallel program now. We have multiple nodes all accessing the same memory. Some of the accesses are for data, some are for synchronization. **Sequential consistency does not distinguish between accesses for data and accesses for synchronization primitives.** This means there will be coherence action on every r/w access.
+
+### Typical parallel program
+
+In a typical parallel program, locks and other synchronization primitives make sure that parallel threads don't interfere with each other. 
+
+The SC memory model does not know about the association between memory accesses emanating from the processor due to the lock primitive are different than the accesses in the critical section.
+
+The cache coherence mechanism is thus going to be doing extra work than it needs to do. Because it's going to take action on every memory access. This means there will be more overhead for the SC memory model.
+
+### Release Consistency
+
+<img src="resources/7_memory_systems/release_consistency.png">
+
+Parallel programs consist of several different parallel threads. If a thread wants to mess with shared data, it will acquire a lock. So long as they hold the lock, they can modify the structure. Once they are done, they will release the lock.
+
+With release consistency, the model states that if a lock release happens before lock acquisition, coherence actions need to be taken before the acquisition happens. 
+
+The idea of lock and release is actually general, you can think of arriving at a barrier and leaving a barrier as similar actions.
+
+What this means is if the program is doing a shared memory access within a critical section that there will not be any processor blocking until lock release. In the SC model, this access would normally result in coherence actions and messaging on the interconnect to the other processes, which would block the processor that the thread was executing on.
+
+#### Memory Model
+
+<img src="resources/7_memory_systems/release_consistency2.png">
+
+Let's return back to our program and analyze it with a release consistency model. Release consistency distinguishes between synchronization accesses and normal data accesses. This means the processor will be doing less work. The expectation is that you will get better performance in a shared memory machine if you use the RC memory model vs the SC memory model.
+
+<img src="resources/7_memory_systems/release_consistency3.png">
+
+### Lazy Release Consistency
+
+What we called release consistency is really an eager version of release consistency. In that model, all needed coherence actions are completed before a lock is released by a thread. The whole system is cache-coherent at the time of lock release.
+
+<img src="resources/7_memory_systems/lazy_rc.png">
+
+We have seen in a couple examples: lock acquisition algorithms (with delay), and process scheduling algorithms, that procrastination can sometimes improve system efficiency. 
+
+In the lazy release consistency model, not all the coherence actions need to be done before a lock is released. They only need to be done before an acquisition of the lock.
+
+### Comparing Eager to Lazy RC
+
+<img src="resources/7_memory_systems/lazy_v_eager_rc.png">
+
+There is less communication overhead in lazy RC because it only needs to sync at acquisition time. This means it doesn't waste time communicating with processors that don't need to see the coherence updates yet.
