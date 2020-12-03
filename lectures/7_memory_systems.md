@@ -304,4 +304,23 @@ In the lazy release consistency model, not all the coherence actions need to be 
 
 <img src="resources/7_memory_systems/lazy_v_eager_rc.png">
 
-There is less communication overhead in lazy RC because it only needs to sync at acquisition time. This means it doesn't waste time communicating with processors that don't need to see the coherence updates yet.
+There is less communication overhead in lazy RC because it only needs to sync at acquisition time. This means it doesn't waste time communicating with processors that don't need to see the coherence updates yet. 
+
+The downside of the lazy model is that there will be more latency at lock acquisition time.
+
+### Software DSM
+
+Let's talk about how these memory models come into play when building **software distributed shared memory**. We are dealing with a **computational cluster**, each node has its own private physical memory, therefore the **software system has to implement the consistency model for the programmer**.
+
+In a tightly-coupled multiprocessor, coherence is maintained at individual memory access level by the hardware. Unfortunately, this fine-grained coherence will lead to too much overhead in a cluster. 
+
+The first thought is to implement the sharing and coherence at the level of pages. Even in a simple processor, the unit of coherence isn't a single word. In order to exploit spatial locality, the block size in caches in processors tend to be bigger than the granularity of memory access that is possible from individual instructions in the processor. 
+
+We are going to provide a **global virtual memory abstraction** to the application program running on the cluster. Under the covers, the DSM is partitioning the global address space into chunks that are managed individually by the nodes.
+
+From the point of perspective of an application programmer, what this abstraction gives us is **address equivalence**, memory location X, is the same, no matter which processor or node it is executed on.
+
+The way the DSM software handles maintenance of coherence is to have distributed ownership for the different virtual pages that constitute the global virtual address space. 
+
+This means that the owner of a particular page is also responsible for keeping complete coherence information for that page. 
+
