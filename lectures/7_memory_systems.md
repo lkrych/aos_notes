@@ -458,3 +458,86 @@ xFS is the distributed file system we are going to talk about. It builds upon th
 * **Dynamic Management** - of data and metadata
 * **Subsetting** - of storage servers
 * **Distributed** - log cleaning
+
+### Dynamic Management
+
+To motivate the need for dynamic management of data and metadata, let's look at the structure of a traditional centralized NFS server. 
+
+In a traditional NFS server the data blocks reside on the disks, in the memory of the server are the metadata for the files (inodes),the file cache (files brought in from disk), and the server also keeps the client caching directory, who on the LAN is currently accessing files that are the property fo the file server. 
+
+All of these contents are in the memory of a particular server. If this server happens to house hot files, then this server has a lot to worry about. It is constrained by the bandwidth that's available to access the files on the disk, it is constrained by its memory capacity, at the same time there could be another server but unfortunately, it is housing cold files. This centralization results in hot spots.
+
+<img src="resources/7_memory_systems/dynamic_management.png">
+
+In our new design, we are trying to avoid these hot spots. In xFS, it provides the same functionality, but it is distributed and the **metadata management is dynamic**. 
+
+What does this mean? In a centralized design, the manager node and the location of the file are the same. In the distributed design, the data structures can reside on different nodes in the network. This conserves the memory amongst the nodes.
+
+### Log-based Striping and Stripe Groups
+
+<img src="resources/7_memory_systems/log_based_striping.png">
+
+xFS uses log-based striping. This means that clients on the LAN are using files and writing to them. When they write to the file, the changes that are made are added to an append-only log, a data structure in the memory of the client (in the file system). 
+
+When a log segment on a client surpasses a threshold, the file is written to the disk. To do this, the client takes the log fragments, computes the checksum for the file, and writes the log segment in a stripe across the storage servers across the LAN. 
+
+Not all storage servers are written to. Only a subset are chosen by the client. This subset is known as a stripe group.
+
+<img src="resources/7_memory_systems/stripe_group.png">
+
+Using a stripe group for a log segment avoids the small write pitfall (a small write doesn't have to be distributed across 100 servers, it can only be distributed across 5, which makes it easier to write and retrieve). 
+
+This also makes it easier to have parallel activity, and thus availability of the storage nodes. Cleaning the logs also becomes easier, because it is managed by individual nodes. 
+
+
+### Cooperative Caching
+
+Let's talk about how xFS uses the memory available in the clients to cooperatively cache the files it is serving. 
+
+**In xFS**, as opposed to the traditional Unix file system, **coherence of the files is taken into account**. In Unix, the file server assumes it is serving each client independently, so it doesn't worry about sharing files. 
+
+The file block is the unit of coherence in xFS, and the system uses a single writer, multiple reader model.
+
+<img src="resources/7_memory_systems/cooperative_caching.png">
+
+The node that is responsible for the management of a file, has a data structure that contains the metadata about the current state of each file. 
+
+In the figure above, we can see that the metadata manager knows that it has distributed file `f1` to clients `c1` and `c2`. This means that both of these clients contain the file block in their main memory.
+
+Let's imagine that `c3` makes a request to the manager for writing to `f1`, then the node looks up the metadata for it and sees that it is being shared with `c2` and `c3`. This results in a read-write conflict. The manager then sends and invalidation message `c1` and `c2` to invalidate their local copies of the file. They send ACKs back to the manager, and once the manager receives these ACKs, it will tell `c3` it's okay to write to that file.
+
+<img src="resources/7_memory_systems/cooperative_caching2.png">
+
+At the end of this exchange `c3` will have the right to write to the file. This is granted through the exchange of a short-lived token. The manager can revoke this token when it needs to. 
+
+Now when `c1` and `c2` need to access the file, they can actually retrieve it from the memory in `c3`, this is called **cooperative caching**.
+
+### Log Cleaning
+
+<img src="resources/7_memory_systems/log_cleaning.png">
+
+As client activities go on, log segments evolve on the disk. Log segments might get overwritten by clients. This means we need to clean old segments which are now stale. This will result in holes in segments. 
+
+The log cleaning process coalesces blocks with holes into contiguous segments. Once this has happened, the old segments can be garbage-collected -- freeing space on the disk.
+
+Log cleaning happens concurrently with the file serving. Each stripe group is responsible for log cleaning the file blocks that they house. There is a leader follower relationship amongst storage servers in the stripe group and the leader assigns work amongst the group.
+
+### Implementation details
+
+<img src="resources/7_memory_systems/inode.png">
+
+In any unix file system there are i-node data structures that map filename and the data blocks on the disk. Given a filename and the offset for access, the filesystem will utilize the i-node to figure out where the data blocks you're looking for are. 
+
+xFS data structures are a little more involved. First of all, the metadata management is not static. Any client node consults a replicated data structure, called the manager map, to know who is the metadata manager for the filename the client wants.
+
+<img src="resources/7_memory_systems/xfs_data_structures.png">
+
+The manager node action is fairly involved. The client comes to the manager with a filename. It uses a data structure called the file directory that has the i-number for looking up the contents of the file. 
+
+The i-number is a key into the i-map which gives the i-node address for the particular log segment for that filename. Using the stripe-group map, it can locate the storage server that contains the log segment ID that is associated with that filename.
+
+Every log segment is striped across a bunch of disks, a stripe group. The stripe-group map also informs the manager which stripe group that filename belongs to. Once it knows these servers, it can retrieve the data blocks from all of those servers. 
+
+Fortunately, caching helps simplify this process.
+
+### Client Reading a File 
