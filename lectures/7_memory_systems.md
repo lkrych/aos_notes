@@ -11,6 +11,21 @@
     * [Implementation in Unix](#implementation-in-unix)
         * [Data Structures](#data-structures)
 * [Distributed Shared Memory](#distributed-shared-memory)
+    * [Implicit Paralellization](#implicit-parallelization)
+    * [Message Passing](#message-passing)
+    * [Distributed Shared Memory](#distributed-shared-memory)
+    * [Shared Memory Programming](#shared-memory-programming)
+    * [Memory Consistency and Cache Coherence](#memory-consistency-and-cache-coherence)
+    * [Release Consistency](#release-consistency)
+        * [Memory Model](#memory-model)
+    * [Lazy Release Consistency](#lazy-release-consistency)
+    * [Comparing Lazy RC and RC](#comparing-eager-to-lazy-rc)
+    * [Software DSM](#software-dsm)
+    * [Lazy Release Consistency with Multi-Writer Coherence](#lazy-release-consistenncy-with-multi-writer-coherence)
+    * [Implementation](#implementation)
+    * [Non Page-based DSM](#non-page-based-dsm)
+    * [Scalability](#scalability)
+* [Distributed File Systems](#distributed-file-systems)
 
 ## Global Memory Systems
 
@@ -54,7 +69,7 @@ There are two states to memory pages in GMS, **private or shared**. A private pa
 
 The whole idea of GMS is to **serve as a paging facility**. Coherence for shared pages is outside the purview of GMS, it considers this an application problem. Why? You can think about a uniprocessor example where many processes are sharing pages. It isn't really the VMM's responsibility to make sure that these pages are coherent, thus, in GMS, it is not it's responsibility.
 
-Managing age information of pages in a distributed system of pages is one of the key technical contributions of the G<S> system.
+Managing age information of pages in a distributed system of pages is one of the key technical contributions of the GMS system.
 
 ### Handling Page Faults
 
@@ -371,3 +386,15 @@ In this lesson we covered a particular example of DSM software that uses lazy re
 There are some implementations that track reads and writes on individual variables. How is this done? The programming library provides a way to annotated shared variables. Whenever the runtime detects that one of these shared variables has been modified, it traps to the DSM library which starts coherence procedures.
 
 Another approach is not at the level of memory locations, but at the level of structures that are meaningful for an application.
+
+### Scalability
+
+DSM provides the same interface that an application programmer aspects from a shared memory multiprocessor. The DSM software looks and feels like a shared memory threads package. A good question to ask is whether the performance of a multi-threaded app scale up as we increase the processors in the cluster?
+
+<img src="resources/7_memory_systems/scalability.png">
+
+We are exploiting parallelism in our program and in our hardware. Unfortunately, there is much more overhead with cache coherence now. 
+
+If the sharing is too fine-grained, we won't see much performance improvement. The basic principle is that **the computation to communication ratio has to be very high to see any chance of a speedup**.
+
+## Distributed File Systems
