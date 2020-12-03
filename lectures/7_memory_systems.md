@@ -358,3 +358,16 @@ When the thread releases the release point, the DSM software will compute the di
 
 Once the thread is completed, the page is write-protected to indicate that the page cannot be written to unless another thread comes into a critical section which means we have to do a coherence action. We can now delete the copy of the page.
 
+As time goes by, there will be a ton of diffs lying around at all the nodes. Let's talk about a dramatic example where ten different diffs are stored in ten different nodes. In that case, when the lock that protects that page is acquired, the DSM software has to query all of those nodes for the diffs and create the coherent state for that page.
+
+One of the things that happens in the DSM software is garbage-collection. If the diff timestamp exceeds a threshold, the garbage-collector will start applying the diffs to the owner of the page. 
+
+### Non Page-based DSM
+
+In this lesson we covered a particular example of DSM software that uses lazy release consistency and multi-writer coherence. Of course, distributed shared memory doesn't have to use pages as its unit of granularity.
+
+<img src="resources/7_memory_systems/non_page_based_dsm.png">
+
+There are some implementations that track reads and writes on individual variables. How is this done? The programming library provides a way to annotated shared variables. Whenever the runtime detects that one of these shared variables has been modified, it traps to the DSM library which starts coherence procedures.
+
+Another approach is not at the level of memory locations, but at the level of structures that are meaningful for an application.
