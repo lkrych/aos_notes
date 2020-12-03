@@ -324,3 +324,37 @@ The way the DSM software handles maintenance of coherence is to have distributed
 
 This means that the owner of a particular page is also responsible for keeping complete coherence information for that page. 
 
+The **DSM software implementation layer implements the global virtual memory abstraction**. It exists on every single processor. It knows who and how to contact the owner of a page to get a current copy.
+
+<img src="resources/7_memory_systems/dsm2.png">
+
+Previous implementations of the DSM software used what is called the **single writer protocol**. There is a directory associated with the portion of the global memory space managed by each node. The directory has information about who is sharing a page at a certain point of time. Multiple readers can share a page, but a single writer is allowed to have a page at a certain point in time. Once a node requests a page from the owner of that page, the owner has to make sure that it invalidates all of the copies that are being read at the current time. 
+
+The problem with a single writer protocol is the potential for fault-sharing. Data appears to be shared even though programmatically it is not. What happens is that multiple locks exist in a single page, and two processors battle to ensure coherence of the page even though they are modifying two separate parts of the page. 
+
+### Lazy Release Consistency with Multi-Writer Coherence
+
+We want to maintain coherence at the granularity of pages because that is the granularity at which the OS operates. This makes it easy to integrate with the OS. 
+
+However, we want multiple writers to write to the same page, recognizing that an application programmer might have packed many different data structures in the same page.
+
+<img src="resources/7_memory_systems/lrc_with_multi.png">
+
+The OS has no way to distinguish memory accesses for synchronization primitives and typical memory accesses. It just knows the pages that were modified during a critical section and the page that a lock lives in. 
+
+To support this new protocol, we are going to create a diff between the former state of the modified pages and the current state of the modified pages. The **next time the same lock is acquired**, say by a different process. We are going to **invalidate the pages that we know have been modified** by the previous lock holder. Once it is in the critical section, if it tries to access any of the pages that we have invalidated, it will trigger a coherence action. It consults the previous lock holder for the modifications that it stored in its diff and makes sure that the new lock holder can see these changes.
+
+<img src="resources/7_memory_systems/lrc_with_multi2.png">
+
+What happens when there are multiple locks that fit within a page in this protocol? The DSM software is not going to change its behavior. The only thing that determines which pages will experience coherence are the pages that are modified in the critical section of a lock. If the same page is modified by a different lock, say L2, the acquisition of the first lock will not pick up the changes from L2.
+
+### Implementation
+
+<img src="resources/7_memory_systems/dsm_imp.png">
+
+When a thread writes to a page X, at the point of the write, the OS will create a copy of the page, the original page will be writeable. The new copy is not referenced im the page table. 
+
+When the thread releases the release point, the DSM software will compute the diff between the changes made to the original page and the copy. This diff will be run-length encoded, and thus only contain the changes.
+
+Once the thread is completed, the page is write-protected to indicate that the page cannot be written to unless another thread comes into a critical section which means we have to do a coherence action. We can now delete the copy of the page.
+
