@@ -398,3 +398,63 @@ We are exploiting parallelism in our program and in our hardware. Unfortunately,
 If the sharing is too fine-grained, we won't see much performance improvement. The basic principle is that **the computation to communication ratio has to be very high to see any chance of a speedup**.
 
 ## Distributed File Systems
+
+Network file systems have evolved over time, but the central idea is still the same. There are distributed clients across a LAN, and there are file servers sitting on the LAN. The servers can be partitioned based on different types of users on the LAN. Because the disk is slow, caches are managed in front of the file servers. A centralized server is a serious bottleneck for scalability.
+
+Instead of designing this system in a centralized way, can we create a distributed system?
+
+<img src="resources/7_memory_systems/dfs.png">
+
+The vision of a **distributed file system** is that **there is no central server anymore, each file is distributed across several servers**.
+
+The advantages of this design are that the I/O bandwidth is increased because multiple servers are now being used. Also, the management of the metadata for the files is distributed across the servers. Meaning there is less work per server. Furthermore, there is more memory available because multiple nodes are being used.
+
+DFS wants to intelligently use cluster memory for efficient management of file metadata and caching. The DFS should try to avoid going to the disk as much as possible. A node should access the cache of other nodes instead of going to disk.
+
+### Striping a file to multiple disks
+
+To describe the ideas that are discussed in DFS, we need to cover some preliminaries. 
+
+<img src="resources/7_memory_systems/raid.png">
+
+The first technology we are going to discuss is **RAID** **(redundant array of inexpensive disks)**. The idea is that a given disk might have a certain amount of I/O bandwidth available. If we string a bunch of disks together, we can have higher bandwidth. Unfortunately, this also leads to a higher chance of failure for an individual file because one of the disks could fail.
+
+When you write a file in RAID, you do the following: You break the file into multiple chunks and write one chunk to each of the disks in the RAID. To help prevent file failure, we compute a checksum for the file and store it into an error-correcting disk.
+
+The cons of RAID are higher cost and the so-called small-write problem, it is inefficient to store small writes across many disks. 
+
+How can we solve the small-write problem? This brings us to another background technology - **Log-structure file systems**. 
+
+### Log Structured File Systems
+
+<img src="resources/7_memory_systems/log_structured_fs.png">
+
+The idea here is that in making a change to file Y, we **store the diff/change to the file**, instead of the newly written data. This is called a log record. 
+
+The file system keeps a data structure called the log segment in memory to hold all of the log records for a particular file.
+
+Periodically, the log segment is written to disk so as to reduce the possibility that if the node fails that the in memory records are lost. This flushing also happens if a log segment fills up rapidly.
+
+When a file is read in a log-structured file system, the file system has to reconstruct the file from the log segments for the file. This is a one-time cost though, as once it is read, it is stored in its entire state in memory.
+
+### Software RAID
+
+<img src="resources/7_memory_systems/software_raid.png">
+
+The next background technology is software RAID. We mentioned that hardware RAID has two problems, high-cost and the small-write problem. Fortunately we can alleviate the small-write problem by using a log-structured file system.
+
+Unfortunately, the hardware RAID has another problem, multiple hardware drives. This is expensive and hard to manage.
+
+On the other hand, with a LAN there is a lot of compute power, and every node has associated with it disks. **Could we not use disks on LAN to do the same thing that we did with hardware RAID?** Stripe a file across the disks in a LAN.
+
+This was the idea behind the Zebra file system developed at Berkeley. It combines both the log FS and RAID technology across a LAN. We stripe log segments across the disks.
+
+### Putting it all together
+
+xFS is the distributed file system we are going to talk about. It builds upon the shoulders of prior technologies. 
+
+* **Log-based striping** - Zebra
+* **Cooperative caching**- from prior UCB work
+* **Dynamic Management** - of data and metadata
+* **Subsetting** - of storage servers
+* **Distributed** - log cleaning
