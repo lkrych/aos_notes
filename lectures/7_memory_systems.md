@@ -541,3 +541,23 @@ Every log segment is striped across a bunch of disks, a stripe group. The stripe
 Fortunately, caching helps simplify this process.
 
 ### Client Reading a File 
+
+<img src="resources/7_memory_systems/file_access.png">
+
+Fortunately, every file read doesn't have to jump through so many hoops to get data blocks. This is where caches come into play. When you start with a filename and offset, you look up the directory (in local memory), and you get an index and offset. If this file has been access befored, it is likely in your own unix cache. If it is, then you get it. Easy peasy.
+
+<img src="resources/7_memory_systems/file_access2.png">
+
+It is possible that a file is being shared, or the same file is being read by different clients. In either case, the file is in the cache of another client. This means that you can't go to your local cache, so what you do is consult the manager map in your local memory. This lookup will tell you which manager to contact. You then contact the manager who tells you, after consulting their metadata, that a different client has the node and has it in their cache. The manager then tells that client to send the data over to the node that requested it.
+
+This case is slower because there is network communication. Potentially, there could be 3 hops.
+
+If the file doesn't exist in any of the caches, we have to go the pathologically long way to look up the data blocks which is looking up the blocks from the stripe group.
+
+<img src="resources/7_memory_systems/file_access3.png">
+
+### Client writing to a file
+
+Writing to a file is fairly straightforward. The cliennt is aggregating all the writes into a log segment, and then flushes the log out to the disks. The client knows the stripe group that the log segment belongs to so it writes the log segments to the group.
+
+Once it has done that, it will notify the manager so that the manager has up-to-date information about the file blocks.
