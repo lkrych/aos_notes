@@ -89,3 +89,4 @@ The redo log is not available as a log entry in the log segment created at the b
 
 <img src="resources/8_system_recovery/lrvm_primitive2.png">
 
+Once the transaction is committed, the redo log has been written to disk. Then the undo record is no longer needed, and can be thrown away. 
