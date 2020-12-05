@@ -72,3 +72,20 @@ They are provided as primitives to the application, but **both of these are done
 One optimization features provided by the runtime is an option to the `end_xact` call that informs the runtime that the developer does not want the system to flush the changes to the disk yet, but that she will take care of the flushing.
 
 The main thing to take away is that the RVM API is simple :).
+
+### How the Server uses primitives
+
+<img src="resources/8_system_recovery/lrvm_primitive.png">
+
+The first thing the runtime does inside a transaction is to create a copy of the chunk of the address space specified in the `set_range()` call. This copy is known as the **undo record**. It is set aside because it is possible that the developer will call `abort_xact()`, and it needs to make sure that none of the changes made to the persistent data structures are actually made.
+
+LRVM creates the undo record only if it is needed by the transaction semantic, in the `begin_xact()` call there is a mode specifier that the user can specify to the runtime whether that transaction could ever abort. 
+
+In any event if the transaction eventually commits, at that point it will throw away the undo record. 
+
+Finally, if the transaction commits by calling `end_xact()`, then all the changes made to the persistent data structures need to be written to the log segment that records the redo logs for this thread. At this point the runtime creates a **redo log of the changes made to the region** specified by `set_range()`. The redo log is a data structure managed by the runtime in memory that corresponds to the changes made to the external data segments. It should not be confused with the external data segments themselves. 
+
+The redo log is not available as a log entry in the log segment created at the beginning of the transaction. The runtime then needs to flush the redo log to disk synchronously, this means the `end_xact()` call waits for the redo log to be written to disk, then it returns. 
+
+<img src="resources/8_system_recovery/lrvm_primitive2.png">
+
