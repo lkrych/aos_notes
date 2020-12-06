@@ -90,3 +90,49 @@ The redo log is not available as a log entry in the log segment created at the b
 <img src="resources/8_system_recovery/lrvm_primitive2.png">
 
 Once the transaction is committed, the redo log has been written to disk. Then the undo record is no longer needed, and can be thrown away. 
+
+### Transaction Optimizations
+
+The **no_restore mode** in `begin_xact()` signals to the RVM runtime that the transaction is not going to abort. This means that the undo log doesn't need to be created.
+
+The **no_flush mode** in `end_xact()` tells the runtime that there is no need to synchronously flush the redo log to disk. It will happen, just not right after `end_xact()`. The upshot of this is lazy persistence. The downside is that there is a window of vulnerability. 
+
+### Implementation
+
+<img src="resources/8_system_recovery/lrvm_log.png">
+
+The goal is performance-efficient implementation of RVM.
+
+The first strategy that is used to record changes to the persistent portion of the virtual memory is a logging strategy called **no-undo-redo-value-logging**.
+
+The undo log is kept in memory, not on disk. 
+
+On the other hand, the redo log is committed to memory. In committing the changes to memory we are **only writing the new value records** of committed transactions. 
+
+Upon commit, we replace the old value records in the virtual memory with the new value records. This is automatic because it has created an undo record of the old value records and all the changes that the developer is making are happening in memory to the data structures. In other words, **we are mutating the persistent data structures**. We keep the undo log around so that we can catch an aborted transaction.
+
+The redo log data structure allows traversal in both directions.
+
+### Crash Recovery
+
+<img src="resources/8_system_recovery/crash_recovery.png">
+
+If you look at the redo log, between the transaction header and the end mark are all the changes that have been made in that critical section. 
+
+When we resume from the crash we need to make sure that the external data segments are updated with all the changes that have been made and recorded in the redo log, but not yet applied to the data segments.
+
+During crash recovery, we read the redo log from the tail displacements, and then apply them to the external data segments on disk. 
+
+### Log Truncation
+
+<img src="resources/8_system_recovery/log_truncation.png">
+
+If crashes don't happen that often, but the system is progressing along, we are going to create a lot of log records on the disk. This means that we need to talk about log truncation.
+
+In the case of LRVM the logs are clogging the disk space. If an application needs to map a data segment on disk, we need to know whether or not that are pending logs that need to be applied to that segment.
+
+Log truncation is the process of reading the logs from disk and applying them to the disk. This sounds suspiciously like the crash-recovery algorithm. That's because it is! It uses the crash-recovery algorithm to truncate logs. 
+
+We don't want to stop processing to do truncation, so we do it in parallel. LRVM allows this to happen by splitting the log record into epochs. Epochs chunk the log into segments, and the truncation process only needs to care about log segments that have been designated to be truncated.
+
+The bulk of the LRVM implementation goes into doing log truncation efficiently.
