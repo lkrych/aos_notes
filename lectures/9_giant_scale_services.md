@@ -225,7 +225,9 @@ The routing tables at the user level have a look-up table (somewhat like a DNS) 
 
 If you want to consult a node that's not in your table, you will need to look for a node that's close to the key digest that you compute. You reach out to the peer that's closest to that value, and see if they have it. If they don't you have them see if they have that entry in their own routing table. 
 
-### Metadata Server Overload
+<img src="resources/9_giant_scale/greedy_routing.png">
+
+### Metadata and Origin Server Overload
 
 <img src="resources/9_giant_scale/greedy_congestion.png">
 
@@ -234,4 +236,69 @@ The greedy approach can lead to a metadata server overload. If there are a bunch
 This creates a hotspot for the metadata that allows users to discover the content provider.
 
 All of the users requesting that data will be making the same get calls, is there a better way to distribute the load of servicing this request?
+
+The problem doesn't stop here. The metadata is overloaded because the content is popular, but so is the file server! This is called the origin server overload.
+
+There are two solutions to origin server overload: a web proxy, which can alleviate load by taking up some of the service. Unfortunately, this isn't good enough for the slashdot effect, breaking news requires fresh content, the proxy isn't going to be able to cache that. 
+
+This is where **CDNs** come into play. The **content is mirrored from the origin server to select geographical locations**. These locations are constantly updated by the origin server. This means that they can serve the content now.
+
+**User-requests are dynamically re-routed to the geo-local mirror of the origin server**.
+
+This is good if you are a big organization, because you can just pay a CDN. How can we democratize this technology? This is where the Coral system comes into play.
+
+### Coral Approach
+
+The coral approach to picking a key is to not be greedy when assigning your key to a node. The get/put is satisfied by nodes different from the Key K, this means the node_id N, might not be close to K. This is called **sloppy DHT**.
+
+Our rationale here is that we want to avoid tree saturation and spread the metadata overload over many nodes.
+
+So how does this work?
+
+It has a novel key-based routing algorithm. The basis is that we compute the **XOR distance between the src and destination**. The reason why we want to do an XOR is that an XOR operation is faster than a subtraction. Remember, the node_id's are 160 bit numbers, so XOR is a fast operation.
+
+### Coral Key-based Routing
+
+<img src="resources/9_giant_scale/coral_routing.png">
+
+Coral key-based routing takes a different approach. Rather then trying to minimize the distance to the desired destination, we are going to slowly approach it. 
+
+In particular, the distance between the two nodes in the node namespace is given by the XOR of the node_ids.
+
+
+If we look at the XOR between node 14 (src) and our dest (4), will result in node_id 10. We compute the XOR distance from all the neighbors that we know about in our local routing table.
+
+In the coral algorithm, **we will go to the node that is half the distance to the destination namespace**.
+
+Thus in the above calculation, we will go to a node 5 because it is half of ten. 
+
+The second hop we will go to 2, because node 2 is half of 5. 
+
+The third hop will take us to our original dest node, 1.
+
+What happens if we can't go exactly half the distance? We use approximate jumps and ask for information about jumps from our neighbors.
+
+<img src="resources/9_giant_scale/coral_routing2.png">
+
+<img src="resources/9_giant_scale/coral_routing3.png">
+
+This algorithm results in increased latency for an individual, but better overall service for the content.
+
+### Coral Sloppy DHT
+
+<img src="resources/9_giant_scale/sloppy_dht.png">
+
+The primitives are exactly the same, except the semantics of the put and get are very different in how they are implemented.
+
+We will define two states on our nodes:
+1. A 'full' state - a node is already storing a threshold number of key-value pairs. Space parameter
+2. A 'loaded' state - a node has received a number of requests per unit time over a threshold. Time parameter
+
+These two values will help us determine where to place a key-value pair.
+
+So let's say a proxy wants to put a key,value pair into the DHT. The proxy will take the key and go to a node that is half the distance to the desired destination until it gets to the desired destination. It will ask along the way if the nodes are loaded or full. If they aren't then you proceed to the next node along the way. If none of them are loaded or full, then the proxy would eventually reach the desired destination and place the key,value pair in the destination node.
+
+If however one of those nodes is loaded or full, then the proxy is going to infer that the rest of the path is clogged up because of tree saturation. Therefore we shouldn't place the key,value pair to the destination. We should place the node at the most recent node visited along the path (the furthest along to the destination) that isn't full.
+
+<img src="resources/9_giant_scale/sloppy_dht2.png">
 
