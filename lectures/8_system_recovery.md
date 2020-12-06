@@ -15,6 +15,7 @@
     * [Rio File Cache](#rio-file-cache)
     * [Vista RVM](#vista-rvm)
     * [Crash Recovery](#crash-recovery)
+* [Quicksilver](#quicksilver)
 
 ## Lightweight Recoverable Virtual Memory
 
@@ -220,3 +221,37 @@ For crash recovery, we treat it like an abort. We recover the old image from the
 ### Vista Simplicity
 
 The implementation of Vista is very simple. It is so simple because there are no redo logs or truncation calls. Check-pointing and recovery code is simplified adn there are not group commit optimizations.
+
+## Quicksilver
+
+Quicksilver asks the question, if recovery is so critical for so many subsystems, shouldn't recovery be a first-class citizen in the design of OS?
+
+### Distributed System Structure
+
+<img src="resources/8_system_recovery/ds_structure.png">
+
+If you look at the structure of distributed systems you will likely see three layers, applications, services and a microkernel. The services and the microkernel are part of the OS. This structure lends itself to extensibility and high-performance.
+
+### Quicksilver system architecture
+
+The architecture of quicksilver looks similar to the previous image of distributed services.
+
+Quicksilver was conceived of as a workstation operating system. The ideas enshrined in it predate or were concurrent with many things we take for granted.
+
+What sets it apart was integrating a service to manage transactions across servers. 
+
+### IPC Fundamental to System Services
+
+Because quicksilver is a distributed OS, IPC within and on the local area network is a crucial component.
+
+<img src="resources/8_system_recovery/quicksilver_ipc.png">
+
+In the kernel, a data structure called the service-q is created by the server that wants to serve requests from clients. Clients make requests to the service-q, the kernel makes an up call to the server, and the server executes the request and then passes it back to the service-q, the kernel then gives the response back to the client.
+
+Any process, anywhere in the network can make requests to the service-q. Any server process in the entire distributed system can service requests coming into the queue.
+
+There are some fundamental guarantees guaranteed by Quicksilver which are that there is no loss or duplication of requests.
+
+The IPC call can also be asynchronous. This means the client doesn't have to block on the response.
+
+The only reason we are talking about this is because the recovery mechanism of quicksilver is tied intimately to IPC.
