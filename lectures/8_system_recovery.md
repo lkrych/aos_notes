@@ -11,6 +11,10 @@
     * [Crash Recovery](#crash-recovery)
     * [Log Truncation](#log-truncation)
 * [RioVista](#riovista)
+    * [System Crash](#system-crash)
+    * [Rio File Cache](#rio-file-cache)
+    * [Vista RVM](#vista-rvm)
+    * [Crash Recovery](#crash-recovery)
 
 ## Lightweight Recoverable Virtual Memory
 
@@ -191,7 +195,7 @@ With the Rio File Cache, file writes by a process as well as memory-mapped write
 
 If there is a system crash, whether it is power failure or software crash, the file cache will be written the disk for recovery. One really nice thing about this system is that no synchronous writes are needed to the disk. Writebacks can be arbitrarily delayed.
 
-### Vista RVM on top of Rio
+### Vista RVM
 
 Vista is the RVM library that has been implemented on top of the Rio file cache. 
 
@@ -208,3 +212,11 @@ When the application program writes to the memory-mapped data segment in virtual
 The changes will already have been committed so there is no need for the synchronous I/O in the typical RVM implementation. The only thing we need to do is get rid of the undo log.
 
 If the transaction is aborted the before image is copied back into the virtual memory segment. This will correct the changes to the data segment automatically.
+
+### Crash Recovery
+
+For crash recovery, we treat it like an abort. We recover the old image from the undo log (it is in the rio file cache), we apply it to the virtual address space that it corresponds to and then we are back in business.
+
+### Vista Simplicity
+
+The implementation of Vista is very simple. It is so simple because there are no redo logs or truncation calls. Check-pointing and recovery code is simplified adn there are not group commit optimizations.
