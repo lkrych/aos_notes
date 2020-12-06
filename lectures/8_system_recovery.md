@@ -255,3 +255,21 @@ There are some fundamental guarantees guaranteed by Quicksilver which are that t
 The IPC call can also be asynchronous. This means the client doesn't have to block on the response.
 
 The only reason we are talking about this is because the recovery mechanism of quicksilver is tied intimately to IPC.
+
+### Bundling IPC with Transactions
+
+The secret sauce of recovery management is transactions. These are lightweight transactions. They are very similar to the transactions in LRVM. 
+
+The IPC calls are tagged with a transaction ID.
+
+Let's say a client makes an IPC call to a server. Under the covers, the client contacts the quicksilver kernel on the node it is on, which in turn, contacts the communications manager service on the quicksilver OS. This manager contacts the communication manager on Node B via the kernel on Node B. Depending on the nature of the client and the server, there will be state associated with the interaction.
+
+<img src="resources/8_system_recovery/quicksilver_xaction.png">
+
+The communication manager may itself have state when it is communicating with its peer. We would like to make sure that this state as well as the client-server state is recoverable from failure.
+
+Under the cover, the communication manager contacts the transaction manager, this manager contacts the transaction manager on Node B. This establishes a transaction link as a way of recording the client-server interactions as a way of recovering state if there is a problem with the communication.
+
+The creator of the transaction is the default owner of the transaction. This is known as the root of the transaction tree. The other transaction manager is just a participant. The owner is the coordinator. **There is no extra overhead with transactions because they are built into the IPC calls.**
+
+A chain of client server interactions leads to a transaction tree.
