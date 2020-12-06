@@ -16,6 +16,13 @@
     * [Vista RVM](#vista-rvm)
     * [Crash Recovery](#crash-recovery)
 * [Quicksilver](#quicksilver)
+    * [Distributed System Structure](#distributed-system-structure)
+    * [Quicksilver System Architecture](#quicksilver-system-architecture)
+    * [IPC Fundamentals to System Services](#ipc-fundamental-to-system-service)
+    * [Building IPC with Transactions](#building-ipc-with-transactions)
+    * [Transaction Management](#transaction-management)
+    * [Distributed Transaction](#distributed-transaction)
+    * [Why bundle IPC and recovery management](#why-bundle-ipc-and-recovery-management)
 
 ## Lightweight Recoverable Virtual Memory
 
@@ -285,3 +292,32 @@ In that sense, if the root of the transaction tree is on a client node, cleaning
 The heavylifting that quicksilver does in keeping track of the ordered trail of IPC across the nodes.
 
 ### Distributed Transaction
+
+By their very nature, transactions are distributed. At each node, the transaction manager is responsible fro the client-server interactions that touch that node.
+
+<img src="resources/8_system_recovery/distributed_transactions.png">
+
+There is a graph structure for the transaction tree. All the transaction managers that form this interaction don't have to communicate with the coordinator. For instance, in the above figure, Node C and D only have to communicate with Node B. 
+
+At each node, the transaction managers need to log periodically to a persistent store the state of their transactions. These checkpoint records are useful for partial recovery of work.
+
+When the client-server relationship that resulted in the formation of the transaction tree completes its action, the transaction tree will get into gear and clean up any resources that might have been partially created to support the original client-server relationship.
+
+It is the coordinator node that initiates the termination of the transaction. The termination can be for a commit or for an abort. 
+
+<img src="resources/8_system_recovery/transaction_cleanup.png">
+
+When these termination requests are made it will indicate to all the nodes along the tree that they should take action to clean up any related resources to the transaction.
+
+### Why bundle IPC and recovery management
+
+The upset of bundling these two actions is that a service can safely collect all the breadcrumbs it left behind in all the nodes it touched during the service.
+
+The fact that we have a transaction tree that records the trail of all the nodes that were touched and the temporary states at those nodes is what allows those breadcrumbs to be reclaimed.
+
+There is no extra communication for the recovery management itself. 
+
+Quicksilver only provides the mechanisms, the policies are determined by each service.That means that services can completely ignore this ability and use low-overhead mechanisms. 
+
+Logs are maintained at every node in the transaction, this is what allows for recovery during failure. The frequency of the log writes to disk impacts performance (they are synchronous I/O), but also how accurate and vulnerable the saved state is to failure.
+
