@@ -14,7 +14,8 @@
 * [MapReduce](#mapreduce)
     * [Why MapReduce?](#why-mapreduce)
     * [MapReduce Runtime](#issues-handled-by-mapreduce-runtime)
-* [CDNs]
+* [CDNs]()
+
 
 ## Introduction
 
@@ -166,8 +167,71 @@ There is a lot of work done by the runtime system to ensure that MapReduce funct
 
 The master data structures include:
 
-1. Bookkeeping - the location of files created by the completed mapper workers. The namespaces of the files created by the mappers.
-2. Bookkeeping - scoreboard of mapper/reducer assignments because the number of machines that may be available might be less than the number of machines that are needed.
-3. Fault tolerance - for a variety of reasons, a worker might go offline. The master needs to be able to start new instance if there is no timely response from a worker. Completion messages need to be filtered out for redundant work.
-4. Locality Management - make sure that memory usage is managed carefully for each of the machines. Accomplished using googleFS. 
-5. Task Granularity - Good load balance of the computational resources. The programming framework uses a hashing function to split up the work.
+1. **Bookkeeping** - the location of files created by the completed mapper workers. The namespaces of the files created by the mappers.
+2. **Bookkeeping** - scoreboard of mapper/reducer assignments because the number of machines that may be available might be less than the number of machines that are needed.
+3. **Fault tolerance** - for a variety of reasons, a worker might go offline. The master needs to be able to start new instance if there is no timely response from a worker. Completion messages need to be filtered out for redundant work.
+4. **Locality Management** - make sure that memory usage is managed carefully for each of the machines. Accomplished using googleFS. 
+5. **Task Granularity** - Good load balance of the computational resources. The programming framework uses a hashing function to split up the work.
+
+## CDNs
+
+In this lesson we will look at content distribution networks --  how is information organized, where is it located, and how is it distributed?
+
+### Distributed Hash Tables
+
+<img src="resources/9_giant_scale/dht.png">
+
+One scheme for publishing content across the internet is to create a unique entry in a global hash table that describes your content. You hash the contents of your data, and with a large enough key value, you can create a unique key in this table. The value of the entry will be where to look for your content. That way when someone wants to see your content, all they need to do is consult this table and then they can know where to look it up.
+
+The idea behind a distributed hash table is that there needs to be a place where people can go to find this entry you just created. To use the DHT, you find a node whose node_id is the same or close to the unique key value that you created by hashing your content. You host your key-value content there. Now all that anyone on the internet needs to do to find your content is to hash the link to your video, consult the node closest to this value, and then they will find the entry that tells them where to look for your content. 
+
+### DHT Details
+
+<img src="resources/9_giant_scale/dht2.png">
+
+The first namespace that the DHT has to lead with is the keyspace namespace. The way this is managed is that you generate a unique 160-bit key by using some hashing algorithm like SHA-1 to create the key. The number of bits in the namespace is hopefully big enough that there will not be collision of key names.
+
+The second namespace is the node space. Here we create a unique 160-bit node_id by passing the IP_addr through a hashing algorithm.
+
+### CDN
+
+<img src="resources/9_giant_scale/overlay_network.png">
+
+A CDN is an example of an overlay network. What does this mean? Well there's a big open question in the example that we gave when describing our DHT above: What does a client do once it is has consulted the hash table? It has retrieved that the content it wants to look at lives in node_id 80, but where does that live? Operating systems only know about IP addresses. **How do we translate the virtual address node_id to a physical address?**
+
+The solution is to create a routing table at the user level. This is called an **overlay network**, **a virtual network on top of the physical network**.
+
+What will this table look like? Well, the information we have is a node_id, there needs to be an association between the node_ids and the next hop along this overlay network. You don't actually have to know how to get to the end node that contains your content, all you need to know is the next hop along the way to getting to that content. So, if you have a peer that has seen something from that target node, you can route the request to your peer, who will route it to the target node.
+
+<img src="resources/9_giant_scale/overlay_network2.png">
+
+### Overlay Networks
+
+Overlay networks are a very general principle and at the OS level we already have an overlay network: there is an IP network overlaying the LAN. One single IP Addr translates to many MAC addresses. 
+
+### DHT and CDNs
+
+A distributed hash table is an implementation vehicle for a CDN to populate the routing table at a user level.
+
+For placement of key,value pairs, we are going to use a `put(key, value)` call. The key is going to be the content hash that uniquely identifies a resource, and value is the node-id where the content is stored. Retrieval of the key-value is done using a `get(key)` operation. The return value is the value associated with that key.
+
+### Constructing a routing table
+
+The traditional approach in constructing a DHT is considered a "greedy" approach.
+
+To store a key, we pick a node N, where n is very close to the key and put our content there. If we want to retrieve a given key, K, we go to the node N which is closest to the key K.
+
+The routing tables at the user level have a look-up table (somewhat like a DNS) associating node_id and IP address. The entries in this table are going to refer to the nodes that the system knows how to interact with directly.
+
+If you want to consult a node that's not in your table, you will need to look for a node that's close to the key digest that you compute. You reach out to the peer that's closest to that value, and see if they have it. If they don't you have them see if they have that entry in their own routing table. 
+
+### Metadata Server Overload
+
+<img src="resources/9_giant_scale/greedy_congestion.png">
+
+The greedy approach can lead to a metadata server overload. If there are a bunch of users generating content and they are all generating keys close to the value of say, 150. All of their content will be stored in that one server.
+
+This creates a hotspot for the metadata that allows users to discover the content provider.
+
+All of the users requesting that data will be making the same get calls, is there a better way to distribute the load of servicing this request?
+
