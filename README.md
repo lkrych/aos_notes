@@ -45,7 +45,7 @@
 * [Giant Scale Services](lectures/9_giant_scale_services.md)
     * **Systems Issues in Giant Scale Services**
     * **MapReduce**
-    * **Content Deliver Networks**
+    * **Content Delivery Networks**
 * [Real time and Multimedia](lectures/10_real_time.md)
     * **TS-Linux**
     * **PTS**
