@@ -12,44 +12,40 @@
 
 * [Introduction to Advanced OS](lectures/1_intro.md)
 * [Operating System Structure Overview](lectures/2_os_structure.md#introduction)
-    * [Introduction](lectures/2_os_structure.md#introduction)
-    * [The SPIN approach](lectures/2_os_structure.md#the-spin-approach)
-    * [The Exokernel Approach](lectures/2_os_structure.md#the-exokernel-approach)
-    * [The Microkernel Approach](lectures/2_os_structure.md#l3-microkernel-approach)
+    * **The SPIN approach**
+    * **The Exokernel Approach**
+    * **The Microkernel Approach**
 * [Virtualization](lectures/3_virtualization.md)
-    * [Introduction](lectures/3_virtualization.md#introduction)
-    * [Memory Virtualization](lectures/3_virtualization.md#memory-virtualization)
-    * [CPU and Device Virtualization](lectures/3_virtualization.md#cpu-virtualization)
+    * **Memory Virtualization**
+    * **CPU and Device Virtualization**
 * [Shared Memory Machines](lectures/4_shared_memory.md)
-    * [Introduction]()
-    * [Synchronizaton]()
-    * [Communication]()
-    * [Lightweight RPC]()
-    * [Scheduling]()
-    * [Shared Memory Multiprocessor OS]()
+    * **Synchronizaton**
+    * **Communication**
+    * **Lightweight RPC**
+    * **Scheduling**
+    * **Shared Memory Multiprocessor OS**
 * [Barrier Synchronization](lectures/barrier_synchronization.md)
-* Distributed Systems
-    * [Introduction]()
-    * [Lamport Clocks]()
-    * [Latency Limits]()
-    * [Active Networks]()
-    * [Systems for Components]()
-* Examples of OS
-    * [Spring Operating System]()
-    * [Java RMI]()
-    * [Enterprise Java Beans]()
-* Memory Systems
-    * [Global Memory Systems]()
-    * [Distributed Shared Memory]()
-    * [Distributed File Systems]()
-* Examples of Memory Systems
-    * [Lightweight Recoverable Virtual Memory]()
-    * [RioVista]()
-    * [Quicksilver]()
-* Giant Scale Services
-    * [Introduction]()
-    * [MapReduce]()
-    * [Content Deliver Networks]()
+* [Distributed Systems](lectures/5_distributed_systems.md)
+    * **Lamport Clocks**
+    * **Latency Limits**
+    * **Active Networks**
+    * **Systems from Components**
+* [Examples of Distributed Systems](lectures/6_os_examples.md)
+    * **Spring Operating System**
+    * **Java RMI**
+    * **Enterprise Java Beans**
+* [Memory Systems](lectures/7_memory_systems.md)
+    * **Global Memory Systems**
+    * **Distributed Shared Memory**
+    * **Distributed File Systems**
+* [System Recovery](lectures/8_system_recovery.md)
+    * **Lightweight Recoverable Virtual Memory**
+    * **RioVista**
+    * **Quicksilver**
+* [Giant Scale Services](lectures/9_giant_scale_services.md)
+    * **Systems Issues in Giant Scale Services**
+    * **MapReduce**
+    * **Content Deliver Networks**
 * Real time and Multimedia
     * [TS-Linux]()
     * [PTS]()
