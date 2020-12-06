@@ -1,7 +1,16 @@
 # System Recovery
 
 ## Table of Contents
-* [Lightweight Recoverable Virtual Memory]
+* [Lightweight Recoverable Virtual Memory](#lightweight-recoverable-virtual-memory)
+    * [Introduction](#introduction)
+    * [LRVM Usage](#server-design)
+    * [RVM Primitives](#rvm-primitives)
+    * [How to use primitives](#how-the-server-uses-primitives)
+    * [Transaction Optimizations](#transaction-optimizations)
+    * [Implementation](#implementation)
+    * [Crash Recovery](#crash-recovery)
+    * [Log Truncation](#log-truncation)
+* [RioVista](#riovista)
 
 ## Lightweight Recoverable Virtual Memory
 
@@ -136,3 +145,66 @@ Log truncation is the process of reading the logs from disk and applying them to
 We don't want to stop processing to do truncation, so we do it in parallel. LRVM allows this to happen by splitting the log record into epochs. Epochs chunk the log into segments, and the truncation process only needs to care about log segments that have been designated to be truncated.
 
 The bulk of the LRVM implementation goes into doing log truncation efficiently.
+
+## RioVista
+
+The APIs provided by LRVM are designed to remove an important pain point for system developers, system crashes. 
+
+In LRVM changes to virtual memory are written as redo logs at the end of a transaction. These logs are forced to the disk at the end of the transaction as commit records made to virtual memory. By default, transaction use synchronous I/O.
+
+RioVista asks the question as to whether we can eliminate synchronous I/o.
+
+### System Crash
+
+There are two orthogonal problems that lead to a system crash:
+1. **Power failure** 
+2. **Software Crash** 
+
+RioVista poses a question, supposing the only source of failure for systems are software crashes, how does that change the design and implementation of failure recovery?
+
+<img src="resources/8_system_recovery/lrvm_revisited.png">
+
+Let's revisit the semantics of LRVM.
+1. When a transaction is started, we know that the application is going to modify some portion of memory.
+2. Let's create a memory copy of the old contents of that memory so we can have a backup if an abort is called.
+3. In the body of the transaction the program is doing normal program writes. 
+4. The application reaches the end transaction. At that point, LRVM is going to write a redo record onto the disk, this record contains all of the log segments that describe the changes the application made to the persistent memory objects. 
+5. At some point the redo log is applied to the disk. The redo logs are then truncated.
+
+If you decide to defer the automated flush, there is a period of vulnerability wherein if the power goes out before you've written the redo log to disk, then you lose all the state that you've been storing. 
+
+The RioVista designers suggest that we **put a battery backup on our DRAM so that we don't have to worry about power failures**. 
+
+### Rio File Cache
+
+<img src="resources/8_system_recovery/rio_file_cache.png">
+
+Before we talk about how we can implement RVM efficiently with a battery pack DRAM. Let's first understand how we can use a battery pack DRAM to implement at persistent file cache. 
+
+Typically file systems use a file cache to hold data that it has brought to disk for efficiency of manipulation of programs running on the processor. When we talk about a persistent file cache, we mean that even if there is a power failure, the file cache will still be available. To do this we will hook up the file cache to a battery so the power never goes away.
+
+There are two ways to use the Rio File Cache. The first is when a process does a file write, they are actually writing to the in-memory copy of the file. Typically OS writes buffer the file to DRAM and then write them out to the disk. This is called write-through. To force a write to disk in Unix systems, application programmers will use a `fsync` call.
+
+Similarly another common operation that is done is that Unix allows files to be `mmap`'d which means it is mapped into memory, and if an application maps a file into memory and then writes to it, those writes will become persistent because the writes are backed by the file cache. 
+
+With the Rio File Cache, file writes by a process as well as memory-mapped writes from a program become persistent.
+
+If there is a system crash, whether it is power failure or software crash, the file cache will be written the disk for recovery. One really nice thing about this system is that no synchronous writes are needed to the disk. Writebacks can be arbitrarily delayed.
+
+### Vista RVM on top of Rio
+
+Vista is the RVM library that has been implemented on top of the Rio file cache. 
+
+The semantics of RVM are exactly the same as what we saw earlier. It is just that the implementation takes advantage of the fact that it is sitting on top of a Rio File Cache.
+
+To do this we will bring the data segment that needs to be persisted into the file cache. We will then map it into virtual memory.
+
+<img src="resources/8_system_recovery/rio_vista.png">
+
+When we hit the begin transaction call, we are going to make a before image of the portion of the virtual memory that we are going to modify. This image is mapped to the file cache and that will serve as the undo log. 
+
+When the application program writes to the memory-mapped data segment in virtual memory, these changes will be persisted automatically in the file cache. 
+
+The changes will already have been committed so there is no need for the synchronous I/O in the typical RVM implementation. The only thing we need to do is get rid of the undo log.
+
+If the transaction is aborted the before image is copied back into the virtual memory segment. This will correct the changes to the data segment automatically.
