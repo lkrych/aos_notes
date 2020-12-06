@@ -4,7 +4,17 @@
 
 ## Table of Contents
 
-* [Introduction]
+* [Introduction](#introduction)
+* [Systems Issues in Giant Scale Services](#systems-issues-in-giant-scale-services)
+    * [Load Management at the Network Level](#load-management-at-the-network-level)
+    * [Load Management in the Transport/Application Level](#load-management-in-the-transport-or-application-level)
+    * [DQ Principle](#dq-principle)
+    * [Replication vs Partitioning](#replication-vs-partitioning)
+    * [Graceful Degradation](#graceful-degradation)
+* [MapReduce](#mapreduce)
+    * [Why MapReduce?](#why-mapreduce)
+    * [MapReduce Runtime](#issues-handled-by-mapreduce-runtime)
+* [CDNs]
 
 ## Introduction
 
