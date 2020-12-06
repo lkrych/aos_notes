@@ -46,9 +46,8 @@
     * **Systems Issues in Giant Scale Services**
     * **MapReduce**
     * **Content Deliver Networks**
-* Real time and Multimedia
-    * [TS-Linux]()
-    * [PTS]()
-* Security
-    * [Introduction]()
-    * [Security in Andrew]()
+* [Real time and Multimedia](lectures/10_real_time.md)
+    * **TS-Linux**
+    * **PTS**
+* [Security](lectures/11_security.md)
+    * **Security in Andrew**
