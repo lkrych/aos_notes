@@ -272,4 +272,16 @@ Under the cover, the communication manager contacts the transaction manager, thi
 
 The creator of the transaction is the default owner of the transaction. This is known as the root of the transaction tree. The other transaction manager is just a participant. The owner is the coordinator. **There is no extra overhead with transactions because they are built into the IPC calls.**
 
-A chain of client server interactions leads to a transaction tree.
+A chain of client server interactions leads to a transaction tree. 
+
+### Transaction Management
+
+<img src="resources/8_system_recovery/transaction_management.png">
+
+The owner of a transaction tree has the right to delegate ownership to someone else. The most fragile parts of a distributed system are the clients. 
+
+In that sense, if the root of the transaction tree is on a client node, cleaning up the breadcrumbs that are left across the IPC path could be difficult if the client goes away.
+
+The heavylifting that quicksilver does in keeping track of the ordered trail of IPC across the nodes.
+
+### Distributed Transaction
